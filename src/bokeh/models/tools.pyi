@@ -31,6 +31,7 @@ from ..core.enums import (
     AutoType as Auto,
     DimensionsType as Dimensions,
     DimensionType as Dimension,
+    LogoStyleType as LogoStyle,
     PanDirectionType as PanDirection,
     RegionSelectionModeType as RegionSelectionMode,
     SelectionModeType as SelectionMode,
@@ -150,12 +151,23 @@ class InspectTool(GestureTool):
 
     toggleable: bool = ...
 
+@dataclass()
+class ToolButton(UIElement):
+
+    tool: Tool | ToolProxy = ...
+
+    icon: IconLike | None = ...
+
+    tooltip: str | None = ...
+
 @dataclass
 class Toolbar(UIElement):
 
     tools: list[Tool | ToolProxy] = ...
 
-    logo: Literal["normal", "grey"] | None = ...
+    children: Auto | list[UIElement | None] = ...
+
+    logo: LogoStyle | None = ...
 
     autohide: bool = ...
 

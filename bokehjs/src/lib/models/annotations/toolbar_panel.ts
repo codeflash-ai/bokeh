@@ -65,7 +65,7 @@ export class ToolbarPanelView extends AnnotationView {
   }
 
   private get is_horizontal(): boolean {
-    return this.toolbar_view.model.horizontal
+    return this.toolbar_view.horizontal
   }
 
   protected _paint(): void {
