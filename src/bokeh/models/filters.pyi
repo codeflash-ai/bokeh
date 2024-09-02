@@ -75,6 +75,8 @@ class GroupFilter(Filter):
 
     group: Any = ...
 
+    multiple: bool = ...
+
 @dataclass
 class CustomJSFilter(Filter):
 
