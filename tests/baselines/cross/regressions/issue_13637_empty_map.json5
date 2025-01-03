@@ -878,6 +878,7 @@
         reset_policy: "standard",
         hold_render: false,
         attribution: [],
+        key_bindings: [],
       },
     },
   ],
