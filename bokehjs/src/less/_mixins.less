@@ -48,12 +48,17 @@
   .mask-image(@icon);
 }
 
-.icon-mask(@icon) {
-  .tool-icon-mask(@icon);
+.icon-ref(@icon) {
+  .mask-image(@icon);
+}
+
+.icon-mask(@icon: "") {
+  .icon-ref(@icon);
   .icon-mask-base();
 }
 
 .icon-mask-base() {
+  background-color: var(--icon-color);
   .mask-size(100% 100%);
   .mask-position(center center);
   .mask-repeat(no-repeat);
@@ -61,6 +66,7 @@
 
 /* for PNG icons; remove when dropped */
 .icon-mask-base-png() {
+  background-color: unset;
   background-size: 100% 100%;
   background-origin: border-box;
   background-position: center center;
