@@ -22,6 +22,7 @@ from .._specs import (
     StringSpec,
 )
 from ..core.enums import (
+    DimensionType as Dimension,
     DirectionType as Direction,
     HexTileOrientationType as HexTileOrientation,
     ImageOriginType as ImageOrigin,
@@ -51,6 +52,7 @@ from ..core.property_mixins import (
     ScalarLineProps,
     TextProps,
 )
+from .annotations.arrows import ArrowHead
 from .callbacks import CustomJS
 from .glyph import (
     ConnectedXYGlyph,
@@ -122,6 +124,24 @@ class Arc(XYGlyph, LineProps):
     end_angle: AngleSpec = ...
 
     direction: Direction = ...
+
+@dataclass
+class ArrowGlyph(Segment):
+
+    start: ArrowHead | None = ...
+
+    end: ArrowHead | None = ...
+
+@dataclass
+class BandGlyph(Glyph, ScalarLineProps, ScalarFillProps, ScalarHatchProps):
+
+    dimension: Dimension = ...
+
+    lower: NumberSpec = ...
+
+    upper: NumberSpec = ...
+
+    base: NumberSpec = ...
 
 @dataclass
 class Bezier(Glyph, LineProps):
@@ -526,3 +546,18 @@ class Wedge(XYGlyph, LineProps, FillProps, HatchProps):
     end_angle: AngleSpec = ...
 
     direction: Direction = ...
+
+@dataclass
+class WhiskerGlyph(Glyph, LineProps):
+
+    dimension: Dimension = ...
+
+    lower: NumberSpec = ...
+
+    upper: NumberSpec = ...
+
+    base: NumberSpec = ...
+
+    lower_head: ArrowHead | None = ...
+
+    upper_head: ArrowHead | None = ...
