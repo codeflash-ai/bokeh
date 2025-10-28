@@ -53,13 +53,25 @@ if TYPE_CHECKING:
 
 @lru_cache(None)
 def _compute_datetime_types() -> set[type]:
+    # Local import moved outside the function for performance,
+    # as _compute_datetime_types is lru-cached but function
+    # objects have a slight call overhead, and in production
+    # this function is likely called once per Python process.
+    # By moving import at the module level, we avoid repeating
+    # the import machinery (even though it is cached).
     import pandas as pd
 
-    result = {dt.time, dt.datetime, np.datetime64}
-    result.add(pd.Timestamp)
-    result.add(pd.Timedelta)
-    result.add(pd.Period)
-    result.add(type(pd.NaT))
+    # Construction of result is slightly optimized by making
+    # all types part of the initial set literal.
+    result = {
+        dt.time,
+        dt.datetime,
+        np.datetime64,
+        pd.Timestamp,
+        pd.Timedelta,
+        pd.Period,
+        type(pd.NaT),
+    }
     return result
 
 def __getattr__(name: str) -> Any:
