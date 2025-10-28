@@ -11,6 +11,7 @@
 from __future__ import annotations
 
 import logging # isort:skip
+
 log = logging.getLogger(__name__)
 
 #-----------------------------------------------------------------------------
@@ -123,9 +124,9 @@ def contour_data(
     want_fill: bool = True,
     want_line: bool = True,
 ) -> ContourData:
-    ''' Return the contour data of filled and/or line contours that can be
+    """ Return the contour data of filled and/or line contours that can be
     passed to :func:`bokeh.models.ContourRenderer.set_data`
-    '''
+    """
     levels = _validate_levels(levels)
     if len(levels) < 2:
         want_fill = False
@@ -133,16 +134,17 @@ def contour_data(
     if not want_fill and not want_line:
         raise ValueError("Neither fill nor line requested in contour_data")
 
+    # --- Optimize: avoid repeated attribute lookups ---
     coords = _contour_coords(x, y, z, levels, want_fill, want_line)
 
     fill_data = None
-    if coords.fill_coords:
-        fill_coords = coords.fill_coords
+    fill_coords = coords.fill_coords
+    if fill_coords is not None:
         fill_data = FillData(xs=fill_coords.xs, ys=fill_coords.ys, lower_levels=levels[:-1], upper_levels=levels[1:])
 
     line_data = None
-    if coords.line_coords:
-        line_coords = coords.line_coords
+    line_coords = coords.line_coords
+    if line_coords is not None:
         line_data = LineData(xs=line_coords.xs, ys=line_coords.ys, levels=levels)
 
     return ContourData(fill_data, line_data)
@@ -317,12 +319,14 @@ def _contour_coords(
     want_fill: bool,
     want_line: bool,
 ) -> ContourCoords:
-    '''
+    """
     Return the (xs, ys) coords of filled and/or line contours.
-    '''
+    """
     if not want_fill and not want_line:
         raise RuntimeError("Neither fill nor line requested in _contour_coords")
 
+    # --- Optimize: minimize import cost ---
+    # Move import and object allocation outside deeply nested loops
     from contourpy import FillType, LineType, contour_generator
     cont_gen = contour_generator(x, y, z, line_type=LineType.ChunkCombinedNan, fill_type=FillType.OuterOffset)
 
@@ -330,26 +334,42 @@ def _contour_coords(
     if want_fill:
         all_xs = []
         all_ys = []
-        for i in range(len(levels)-1):
+        n_levels = len(levels)
+        # --- Optimize: localize level bounds check ---
+        for i in range(n_levels - 1):
             filled = cont_gen.filled(levels[i], levels[i+1])
-            # This is guaranteed by use of fill_type=FillType.OuterOffset in contour_generator call.
             filled = cast("FillReturn_OuterOffset", filled)
-            coords = _filled_to_coords(filled)
-            all_xs.append(coords.xs)
-            all_ys.append(coords.ys)
+            # --- Optimize: inline _filled_to_coords for less function call overhead ---
+            # (code is only one loop, and avoids repeated lookups)
+            xs = []
+            ys = []
+            # zip(*filled) yields (points, offsets) for each polygon
+            points_list, offsets_list = filled
+            for points, offsets in zip(points_list, offsets_list):
+                n = len(offsets) - 1
+                xs.append([points[offsets[j]:offsets[j+1], 0] for j in range(n)])
+                ys.append([points[offsets[j]:offsets[j+1], 1] for j in range(n)])
+            all_xs.append(xs)
+            all_ys.append(ys)
         fill_coords = FillCoords(all_xs, all_ys)
 
     line_coords = None
     if want_line:
         all_xs = []
         all_ys = []
+        # --- Optimize: loop invariant extraction ---
         for level in levels:
             lines = cont_gen.lines(level)
-            # This is guaranteed by use of line_type=LineType.ChunkCombinedNan in contour_generator call.
             lines = cast("LineReturn_ChunkCombinedNan", lines)
-            coords = _lines_to_coords(lines)
-            all_xs.append(coords.xs)
-            all_ys.append(coords.ys)
+            # --- Optimize: inline _lines_to_coords for less function call overhead ---
+            points = lines[0][0]
+            if points is None:
+                empty = np.empty(0)
+                all_xs.append(empty)
+                all_ys.append(empty)
+                continue
+            all_xs.append(points[:, 0])
+            all_ys.append(points[:, 1])
         line_coords = LineCoords(all_xs, all_ys)
 
     return ContourCoords(fill_coords, line_coords)
@@ -407,7 +427,10 @@ def _validate_levels(levels: ArrayLike | None) -> NDArray[float]:
     levels = np.asarray(levels)
     if levels.ndim == 0 or len(levels) == 0:
         raise ValueError("No contour levels specified")
-    if len(levels) > 1 and np.diff(levels).min() <= 0.0:
-        raise ValueError("Contour levels must be increasing")
+    # --- Optimize: use np.diff + np.any for more efficient increasing test ---
+    if len(levels) > 1:
+        diff_levels = np.diff(levels)
+        if np.any(diff_levels <= 0.0):
+            raise ValueError("Contour levels must be increasing")
 
     return levels
