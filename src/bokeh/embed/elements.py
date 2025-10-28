@@ -14,6 +14,9 @@
 from __future__ import annotations
 
 import logging # isort:skip
+from bokeh.core.templates import MACROS, PLOT_DIV
+from bokeh.embed.util import RenderItem
+
 log = logging.getLogger(__name__)
 
 #-----------------------------------------------------------------------------
@@ -48,6 +51,10 @@ if TYPE_CHECKING:
     from .bundle import Bundle
     from .util import RenderItem
 
+_PLOT_DIV_render = PLOT_DIV.render
+
+_MACROS = MACROS
+
 #-----------------------------------------------------------------------------
 # Globals and constants
 #-----------------------------------------------------------------------------
@@ -77,7 +84,7 @@ def div_for_render_item(item: RenderItem) -> str:
         str
 
     '''
-    return PLOT_DIV.render(doc=item, macros=MACROS)
+    return _PLOT_DIV_render(doc=item, macros=_MACROS)
 
 def html_page_for_render_items(
     bundle: Bundle | tuple[str, str],
