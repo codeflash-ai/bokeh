@@ -309,8 +309,10 @@ def _process_sequence_literals(glyphclass: type[Glyph], kwargs: Attrs, source: C
 
 def _split_feature_trait(ft: str) -> tuple[str, str | None]:
     """Feature is up to first '_'. Ex. 'line_color' => ['line', 'color']"""
-    parts = ft.split("_", 1)
-    return tuple(parts) if len(parts) == 2 else (ft[0], None)
+    idx = ft.find("_")
+    if idx == -1:
+        return (ft[0], None)
+    return (ft[:idx], ft[idx+1:])
 
 def _is_visual(ft: str) -> bool:
     """Whether a feature trait name is visual"""
