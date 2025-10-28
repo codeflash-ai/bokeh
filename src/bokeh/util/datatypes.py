@@ -48,9 +48,9 @@ class MultiValuedDict(Generic[K, V]):
     _dict: dict[K, V | set[V]]
 
     def __init__(self) -> None:
-        '''
+        """
 
-        '''
+        """
         self._dict = {}
 
     def add_value(self, key: K, value: V) -> None:
@@ -75,14 +75,16 @@ class MultiValuedDict(Generic[K, V]):
             self._dict[key] = {existing, value}
 
     def get_all(self, k: K) -> list[V]:
-        '''
+        """
 
-        '''
+        """
         existing = self._dict.get(k)
         if existing is None:
             return []
         elif isinstance(existing, set):
-            return list(cast(set[V], existing))
+            # Use unpacking directly instead of list(cast(set[V], ...)) for slightly less overhead
+            # and don't cast (not needed at runtime): just use list(existing)
+            return [*existing]
         else:
             return [existing]
 
