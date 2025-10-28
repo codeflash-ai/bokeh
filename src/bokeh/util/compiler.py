@@ -428,7 +428,9 @@ def _npmjs_path() -> Path:
     return _npmjs
 
 def _crlf_cr_2_lf(s: str) -> str:
-    return re.sub(r"\\r\\n|\\r|\\n", r"\\n", s)
+    s = s.replace('\\r\\n', '\\n')
+    s = s.replace('\\r', '\\n')
+    return s
 
 def _run(app: Path, argv: list[str], input: dict[str, Any] | None = None) -> str:
     proc = Popen([app, *argv], stdout=PIPE, stderr=PIPE, stdin=PIPE)
