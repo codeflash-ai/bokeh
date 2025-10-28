@@ -360,11 +360,20 @@ def _filled_to_coords(filled: FillReturn_OuterOffset) -> SingleFillCoords:
     # ContourPy filled data format is FillType.OuterOffset.
     xs = []
     ys = []
-    for points, offsets in zip(*filled):
+    # Move repeatedly-used attributes outside the loop for efficiency
+    filled_points, filled_offsets = filled
+    for points, offsets in zip(filled_points, filled_offsets):
         # Polygon with outer boundary and zero or more holes.
         n = len(offsets) - 1
-        xs.append([points[offsets[i]:offsets[i+1], 0] for i in range(n)])
-        ys.append([points[offsets[i]:offsets[i+1], 1] for i in range(n)])
+        # Preallocate lists for the outputs, avoids list growth overhead
+        x_sub = [None] * n
+        y_sub = [None] * n
+        for i in range(n):
+            rng = slice(offsets[i], offsets[i+1])
+            x_sub[i] = points[rng, 0]
+            y_sub[i] = points[rng, 1]
+        xs.append(x_sub)
+        ys.append(y_sub)
     return SingleFillCoords(xs, ys)
 
 def _lines_to_coords(lines: LineReturn_ChunkCombinedNan) -> SingleLineCoords:
