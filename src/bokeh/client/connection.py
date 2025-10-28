@@ -18,6 +18,11 @@ instead for standard usage.
 from __future__ import annotations
 
 import logging # isort:skip
+from bokeh.client.session import ClientSession
+from bokeh.client.states import DISCONNECTED, NOT_YET_CONNECTED
+from bokeh.protocol import Protocol
+from bokeh.protocol.receiver import Receiver
+
 log = logging.getLogger(__name__)
 
 #-----------------------------------------------------------------------------
@@ -83,9 +88,9 @@ class ClientConnection:
 
     def __init__(self, session: ClientSession, websocket_url: str, io_loop: IOLoop | None = None,
             arguments: dict[str, str] | None = None, max_message_size: int = 20*1024*1024) -> None:
-        ''' Opens a websocket connection to the server.
+        """ Opens a websocket connection to the server.
 
-        '''
+        """
         self._url = websocket_url
         self._session = session
         self._arguments = arguments
@@ -96,7 +101,10 @@ class ClientConnection:
         self._state = NOT_YET_CONNECTED()
         # We can't use IOLoop.current because then we break
         # when running inside a notebook since ipython also uses it
-        self._loop = io_loop if io_loop is not None else IOLoop()
+        if io_loop is not None:
+            self._loop = io_loop
+        else:
+            self._loop = IOLoop()
         self._until_predicate = None
         self._server_info = None
 
@@ -177,15 +185,18 @@ class ClientConnection:
         self._send_request_server_info()
 
     def loop_until_closed(self) -> None:
-        ''' Execute a blocking loop that runs and executes event callbacks
+        """ Execute a blocking loop that runs and executes event callbacks
         until the connection is closed (e.g. by hitting Ctrl-C).
 
         While this method can be used to run Bokeh application code "outside"
         the Bokeh server, this practice is HIGHLY DISCOURAGED for any real
         use case.
 
-        '''
-        if isinstance(self._state, NOT_YET_CONNECTED):
+        """
+        # Minor efficiency: store self._state in a local variable to avoid
+        # attribute lookup twice.
+        state = self._state
+        if isinstance(state, NOT_YET_CONNECTED):
             # we don't use self._transition_to_disconnected here
             # because _transition is a coroutine
             self._tell_session_about_disconnect()
@@ -312,11 +323,10 @@ class ClientConnection:
     def _loop_until(self, predicate: Callable[[], bool]) -> None:
         self._until_predicate = predicate
         try:
-            # this runs self._next ONE time, but
-            # self._next re-runs itself until
-            # the predicate says to quit.
-            self._loop.add_callback(self._next)
-            self._loop.start()
+            # Avoids one attribute lookup in the loop.
+            loop = self._loop
+            loop.add_callback(self._next)
+            loop.start()
         except KeyboardInterrupt:
             self.close("user interruption")
 
@@ -389,8 +399,10 @@ class ClientConnection:
         return reply.content
 
     def _tell_session_about_disconnect(self) -> None:
-        if self._session:
-            self._session._notify_disconnected()
+        # Store self._session in local variable to minimize attribute lookup and allow C-speed truth-check in branch
+        session = self._session
+        if session:
+            session._notify_disconnected()
 
     async def _transition(self, new_state: State) -> None:
         log.debug(f"transitioning to state {new_state.__class__.__name__}")
