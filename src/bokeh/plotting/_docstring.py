@@ -75,7 +75,12 @@ def _add_arglines(arglines, param, typ, doc):
 
     # add the docs for the argument
     if doc:
-        arglines += [f"    {x}" for x in doc.rstrip().strip("\n").split("\n")]
+        doc_stripped = doc.rstrip().strip("\n")
+        if "\n" in doc_stripped:
+            doc_lines = doc_stripped.split("\n")
+            arglines.extend(("    " + x) for x in doc_lines)
+        else:
+            arglines.append("    " + doc_stripped)
 
     # if there is a default, add it last
     if arglines and default is not None:
@@ -99,7 +104,10 @@ def _docstring_header(glyphclass):
 
 def _docstring_kwargs(parameters):
     arglines = []
-    for param, typ, doc in (x for x in parameters if x[0].kind == Parameter.KEYWORD_ONLY):
+    # Pull out kind once and filter with list comprehension to avoid generator overhead and double attribute lookups
+    KEYWORD_ONLY = Parameter.KEYWORD_ONLY
+    keyword_params = [x for x in parameters if x[0].kind == KEYWORD_ONLY]
+    for param, typ, doc in keyword_params:
         _add_arglines(arglines, param, typ, doc)
     return "\n".join(arglines)
 
