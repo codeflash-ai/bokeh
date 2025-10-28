@@ -13,7 +13,13 @@
 #-----------------------------------------------------------------------------
 from __future__ import annotations
 
+import numpy as np
+import PIL.Image
+
+from bokeh.core.property.bases import Property
+
 import logging # isort:skip
+
 log = logging.getLogger(__name__)
 
 #-----------------------------------------------------------------------------
@@ -161,14 +167,15 @@ class Image(Property[str]):
     """
 
     def validate(self, value: Any, detail: bool = True) -> None:
-        import numpy as np
-        import PIL.Image
-
+        # Move imports to module scope for efficiency
         if isinstance(value, (str, Path, PIL.Image.Image)):
             return
 
         if isinstance(value, np.ndarray):
-            if value.dtype == "uint8" and len(value.shape) == 3 and value.shape[2] in (3, 4):
+            # For dtype comparison use value.dtype == np.uint8 for robustness and slight speed improvement
+            # Avoid computing shape multiple times
+            shape = value.shape
+            if value.dtype == np.uint8 and len(shape) == 3 and shape[2] in (3, 4):
                 return
 
         msg = "" if not detail else f"invalid value: {value!r}; allowed values are string filenames, PIL.Image.Image instances, or RGB(A) NumPy arrays"
