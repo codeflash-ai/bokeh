@@ -359,7 +359,7 @@ class RGB(Color):
             :class:`~bokeh.colors.RGB`
 
         '''
-        return self.copy()
+        return RGB(self.r, self.g, self.b, self.a)
 
     @property
     def brightness(self) -> float:
