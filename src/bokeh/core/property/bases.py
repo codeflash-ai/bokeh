@@ -20,6 +20,11 @@
 from __future__ import annotations
 
 import logging # isort:skip
+import numpy as np
+import pandas as pd
+from bokeh.core.property.descriptor_factory import PropertyDescriptorFactory
+from bokeh.core.property.singletons import Intrinsic, Undefined
+
 log = logging.getLogger(__name__)
 
 #-----------------------------------------------------------------------------
@@ -36,9 +41,6 @@ from typing import (
     TypeAlias,
     TypeVar,
 )
-
-# Bokeh imports
-from ...util.dependencies import uses_pandas
 from ._sphinx import property_link, register_type_link, type_link
 from .descriptor_factory import PropertyDescriptorFactory
 from .descriptors import PropertyDescriptor
@@ -52,6 +54,8 @@ from .singletons import (
 if TYPE_CHECKING:
     from ...document.events import DocumentPatchedEvent
     from ..has_props import HasProps
+
+PANDAS_SERIES_OR_INDEX = (pd.Series, pd.Index)
 
 #-----------------------------------------------------------------------------
 # Globals and constants
@@ -242,26 +246,23 @@ class Property(PropertyDescriptorFactory[T]):
             True, if new and old match, False otherwise
 
         """
-        import numpy as np
-
+        # Fast path for numpy
         if isinstance(new, np.ndarray) or isinstance(old, np.ndarray):
             return np.array_equal(new, old)
 
-        if uses_pandas(new) or uses_pandas(old):
-            import pandas as pd
-
-            if isinstance(new, pd.Series) or isinstance(old, pd.Series):
-                return np.array_equal(new, old)
-            if isinstance(new, pd.Index) or isinstance(old, pd.Index):
-                return np.array_equal(new, old)
-
+        # Fast path for pandas Series or Index
+        if isinstance(new, PANDAS_SERIES_OR_INDEX) or isinstance(old, PANDAS_SERIES_OR_INDEX):
+            return np.array_equal(new, old)
+        
         try:
-            # this handles the special but common case where there is a dict with array
-            # or series as values (e.g. the .data property of a ColumnDataSource)
             if isinstance(new, dict) and isinstance(old, dict):
-                if set(new.keys()) != set(old.keys()):
+                # Faster dict key comparison
+                if new.keys() != old.keys():
                     return False
-                return all(self.matches(new[k], old[k]) for k in new)
+                for k in new:
+                    if not self.matches(new[k], old[k]):
+                        return False
+                return True
 
             # FYI Numpy can erroneously raise a warning about elementwise
             # comparison here when a timedelta is compared to another scalar.
