@@ -14,6 +14,8 @@
 from __future__ import annotations
 
 import logging # isort:skip
+from functools import lru_cache
+
 log = logging.getLogger(__name__)
 
 #-----------------------------------------------------------------------------
@@ -46,9 +48,7 @@ def model_link(fullname: str) -> str:
     return f":class:`~{fullname}`\\ "
 
 def property_link(obj: Any) -> str:
-    # (double) escaped space at the end is to appease Sphinx
-    # https://www.sphinx-doc.org/en/master/usage/restructuredtext/basics.html#gotchas
-    return f":class:`~bokeh.core.properties.{obj.__class__.__name__}`\\ "
+    return _cached_property_link(type(obj))
 
 Fn: TypeAlias = Callable[[Any], str]
 
@@ -60,6 +60,13 @@ def register_type_link(cls: type[Any]) -> Callable[[Fn], Fn]:
 
 def type_link(obj: Any) -> str:
     return _type_links.get(obj.__class__, property_link)(obj)
+
+
+@lru_cache(maxsize=128)
+def _cached_property_link(cls: type) -> str:
+    # (double) escaped space at the end is to appease Sphinx
+    # https://www.sphinx-doc.org/en/master/usage/restructuredtext/basics.html#gotchas
+    return f":class:`~bokeh.core.properties.{cls.__name__}`\\ "
 
 #-----------------------------------------------------------------------------
 # Dev API

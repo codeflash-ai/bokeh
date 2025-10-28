@@ -14,6 +14,8 @@
 from __future__ import annotations
 
 import logging # isort:skip
+from bokeh.core.property._sphinx import property_link, register_type_link, type_link
+
 log = logging.getLogger(__name__)
 
 #-----------------------------------------------------------------------------
@@ -388,5 +390,8 @@ def _sphinx_type_seq(obj: Seq[Any]):
 
 @register_type_link(Tuple)
 def _sphinx_type_tuple(obj: Tuple):
-    item_types = ", ".join(type_link(x) for x in obj.type_params)
+    # Bind functions locally and use a list for join efficiency in tight loops
+    local_type_link = type_link
+    items = [local_type_link(x) for x in obj.type_params]
+    item_types = ", ".join(items)
     return f"{property_link(obj)}({item_types})"
