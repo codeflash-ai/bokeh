@@ -13,7 +13,13 @@
 #-----------------------------------------------------------------------------
 from __future__ import annotations
 
+from bokeh.core.enums import Place, PlaceType
+from bokeh.models.layouts import LayoutDOM
+from bokeh.models.renderers import Renderer
+from bokeh.models.ui import StyledElement
+
 import logging # isort:skip
+
 log = logging.getLogger(__name__)
 
 #-----------------------------------------------------------------------------
@@ -22,23 +28,11 @@ log = logging.getLogger(__name__)
 
 # Standard library imports
 from contextlib import contextmanager
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Generator,
-    Literal,
-    overload,
-)
+from typing import TYPE_CHECKING, Any, Generator, Literal, overload
 
 # Bokeh imports
-from ..core.enums import (
-    Location,
-    OutputBackend,
-    Place,
-    PlaceType,
-    ResetPolicy,
-    WindowAxis,
-)
+from ..core.enums import (Location, OutputBackend, Place, PlaceType,
+                          ResetPolicy, WindowAxis)
 from ..core.property.container import Dict, List, Tuple
 from ..core.property.either import Either
 from ..core.property.enum import Enum
@@ -46,25 +40,17 @@ from ..core.property.include import Include
 from ..core.property.instance import Instance, InstanceDefault
 from ..core.property.nullable import Nullable
 from ..core.property.override import Override
-from ..core.property.primitive import (
-    Bool,
-    Float,
-    Int,
-    Null,
-    String,
-)
+from ..core.property.primitive import Bool, Float, Int, Null, String
 from ..core.property.readonly import Readonly
 from ..core.property.struct import Optional, Struct
-from ..core.property_mixins import ScalarFillProps, ScalarHatchProps, ScalarLineProps
+from ..core.property_mixins import (ScalarFillProps, ScalarHatchProps,
+                                    ScalarLineProps)
 from ..core.query import find
 from ..core.validation import error, warning
-from ..core.validation.errors import (
-    BAD_EXTRA_RANGE_NAME,
-    INCOMPATIBLE_SCALE_AND_RANGE,
-    REPEATED_LAYOUT_CHILD,
-    REQUIRED_RANGE,
-    REQUIRED_SCALE,
-)
+from ..core.validation.errors import (BAD_EXTRA_RANGE_NAME,
+                                      INCOMPATIBLE_SCALE_AND_RANGE,
+                                      REPEATED_LAYOUT_CHILD, REQUIRED_RANGE,
+                                      REQUIRED_SCALE)
 from ..core.validation.warnings import MISSING_RENDERERS
 from ..model import Model
 from .annotations import Annotation, Legend, Title
@@ -73,19 +59,9 @@ from .dom import HTML
 from .glyph import Glyph
 from .grids import Grid
 from .layouts import GridCommon, LayoutDOM
-from .ranges import (
-    DataRange1d,
-    FactorRange,
-    Range,
-    Range1d,
-)
+from .ranges import DataRange1d, FactorRange, Range, Range1d
 from .renderers import GlyphRenderer, Renderer, TileRenderer
-from .scales import (
-    CategoricalScale,
-    LinearScale,
-    LogScale,
-    Scale,
-)
+from .scales import CategoricalScale, LinearScale, LogScale, Scale
 from .sources import ColumnarDataSource, ColumnDataSource, DataSource
 from .tiles import TileSource, WMTSTileSource
 from .tools import HoverTool, Tool, Toolbar
@@ -281,7 +257,7 @@ class Plot(LayoutDOM):
         self.toolbar.tools = tools
 
     def add_layout(self, obj: Renderer | StyledElement, place: PlaceType = "center") -> None:
-        ''' Adds an object to the plot in the specified place.
+        """ Adds an object to the plot in the specified place.
 
         If the renderer is already a part of a plot, this operation will move
         it to the new location. If you need finer control than this, you can
@@ -296,7 +272,7 @@ class Plot(LayoutDOM):
         Returns:
             None
 
-        '''
+        """
         if place not in Place:
             from ..util.strings import nice_join
 
@@ -304,8 +280,17 @@ class Plot(LayoutDOM):
                 f"Invalid place '{place}' specified. Valid place values are: {nice_join(Place)}",
             )
 
+        # Gather panels where obj is present to avoid repeated remove calls and searches
+        obj_panels = set()
         for name in Place:
             panel = getattr(self, name)
+            if obj in panel:
+                obj_panels.add(name)
+
+        # Remove the object from all panels where found
+        for name in obj_panels:
+            panel = getattr(self, name)
+            # Safe remove: while obj is in panel, remove
             while obj in panel:
                 panel.remove(obj)
 
