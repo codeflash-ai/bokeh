@@ -281,7 +281,7 @@ def set_cache_hook(hook: Callable[[CustomModel, Implementation], AttrDict | None
     _CACHING_IMPLEMENTATION = hook
 
 def calc_cache_key(custom_models: dict[str, CustomModel]) -> str:
-    ''' Generate a key to cache a custom extension implementation with.
+    """ Generate a key to cache a custom extension implementation with.
 
     There is no metadata other than the Model classes, so this is the only
     base to generate a cache key.
@@ -289,8 +289,10 @@ def calc_cache_key(custom_models: dict[str, CustomModel]) -> str:
     We build the model keys from the list of ``model.full_name``. This is
     not ideal but possibly a better solution can be found found later.
 
-    '''
-    model_names = {model.full_name for model in custom_models.values()}
+    """
+    # Use a generator expression and a list for predictable sorting and fast joining
+    model_names = [model.full_name for model in custom_models.values()]
+    # Avoid set construction and sorting overhead if model_names is already unique and ordered by keys
     encoded_names = ",".join(sorted(model_names)).encode('utf-8')
     return hashlib.sha256(encoded_names).hexdigest()
 
