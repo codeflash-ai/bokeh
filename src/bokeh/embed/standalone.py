@@ -14,6 +14,9 @@
 from __future__ import annotations
 
 import logging # isort:skip
+from bokeh.document.document import Document
+from bokeh.model import Model
+
 log = logging.getLogger(__name__)
 
 #-----------------------------------------------------------------------------
@@ -447,23 +450,44 @@ def json_item(model: Model, target: ID | None = None, theme: ThemeLike = None) -
 #-----------------------------------------------------------------------------
 
 def _check_models_or_docs(models: ModelLike | ModelLikeCollection) -> ModelLikeCollection:
-    '''
+    """
 
-    '''
+    """
     input_type_valid = False
 
     # Check for single item
     if isinstance(models, (Model, Document)):
         models = [models]
 
-    # Check for sequence
-    if isinstance(models, Sequence) and all(isinstance(x, (Model, Document)) for x in models):
-        input_type_valid = True
+    # Fast-path: dict check before sequences
+    if isinstance(models, dict):
+        # Avoid constructing temporary lists when checking keys and values.
+        # Use generator expressions with zip to minimize overhead, stopping early when possible.
+        keys = models.keys()
+        values = models.values()
 
-    if isinstance(models, dict) and \
-        all(isinstance(x, str) for x in models.keys()) and \
-        all(isinstance(x, (Model, Document)) for x in models.values()):
-        input_type_valid = True
+        # Check keys and values length once to avoid double iteration
+        # If dictionary is empty, skip 'all' checks for efficiency
+        if len(models) == 0:
+            input_type_valid = True
+        else:
+            # Merge both checks into a single loop to avoid walking twice
+            for k, v in zip(keys, values):
+                if not isinstance(k, str) or not isinstance(v, (Model, Document)):
+                    break
+            else:
+                input_type_valid = True
+
+    elif isinstance(models, Sequence):
+        # Sequences: skip empty, check with for loop for short-circuit
+        if len(models) == 0:
+            input_type_valid = True
+        else:
+            for x in models:
+                if not isinstance(x, (Model, Document)):
+                    break
+            else:
+                input_type_valid = True
 
     if not input_type_valid:
         raise ValueError(
