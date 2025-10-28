@@ -50,6 +50,8 @@ The ``content`` fragment is defined by the specific message type.
 from __future__ import annotations
 
 import logging # isort:skip
+from bokeh.client.websocket import WebSocketClientConnectionWrapper
+
 log = logging.getLogger(__name__)
 
 #-----------------------------------------------------------------------------
@@ -263,12 +265,21 @@ class Message(Generic[Content]):
         if conn is None:
             raise ValueError("Cannot write_buffers to connection None")
         sent = 0
-        for buffer in self._buffers:
-            header = json.dumps(buffer.ref)
-            payload = buffer.to_bytes()
-            await conn.write_message(header, locked=locked)
-            await conn.write_message(payload, binary=True, locked=locked)
-            sent += len(header) + len(payload)
+        if locked:
+            with await conn.write_lock.acquire():
+                for buffer in self._buffers:
+                    header = json.dumps(buffer.ref)
+                    payload = buffer.to_bytes()
+                    await conn.write_message(header, locked=False)
+                    await conn.write_message(payload, binary=True, locked=False)
+                    sent += len(header) + len(payload)
+        else:
+            for buffer in self._buffers:
+                header = json.dumps(buffer.ref)
+                payload = buffer.to_bytes()
+                await conn.write_message(header, locked=locked)
+                await conn.write_message(payload, binary=True, locked=locked)
+                sent += len(header) + len(payload)
         return sent
 
     @classmethod
