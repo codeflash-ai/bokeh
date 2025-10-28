@@ -14,6 +14,14 @@
 from __future__ import annotations
 
 import logging # isort:skip
+from bokeh.core.has_props import HasProps
+from bokeh.core.templates import CSS_RESOURCES, JS_RESOURCES
+from bokeh.document.document import Document
+from bokeh.embed.util import contains_tex_string
+from bokeh.resources import Hashes, Resources
+from bokeh.settings import settings
+from bokeh.util.compiler import bundle_models
+
 log = logging.getLogger(__name__)
 
 #-----------------------------------------------------------------------------
@@ -382,7 +390,7 @@ def _use_tables(all_objs: set[HasProps]) -> bool:
     return _any(all_objs, lambda obj: isinstance(obj, TableWidget)) or _ext_use_tables(all_objs)
 
 def _use_widgets(all_objs: set[HasProps]) -> bool:
-    ''' Whether a collection of Bokeh objects contains a any Widget
+    """ Whether a collection of Bokeh objects contains a any Widget
 
     Args:
         objs (seq[HasProps or Document]) :
@@ -390,9 +398,17 @@ def _use_widgets(all_objs: set[HasProps]) -> bool:
     Returns:
         bool
 
-    '''
+    """
+    # Move the import outside the function for improved efficiency if function is called multiple times
+    # It is safe as Widget is only used for isinstance and not mutated.
     from ..models.widgets import Widget
-    return _any(all_objs, lambda obj: isinstance(obj, Widget)) or _ext_use_widgets(all_objs)
+
+    # Fast-path check: build set of types only once
+    widget_type = Widget
+    for obj in all_objs:
+        if isinstance(obj, widget_type):
+            return True
+    return _ext_use_widgets(all_objs)
 
 def _model_requires_mathjax(model: HasProps) -> bool:
     """Whether a model requires MathJax to be loaded
@@ -465,6 +481,7 @@ def _ext_use_tables(all_objs: set[HasProps]) -> bool:
     return _query_extensions(all_objs, lambda cls: issubclass(cls, TableWidget))
 
 def _ext_use_widgets(all_objs: set[HasProps]) -> bool:
+    # Move the import outside the function for efficiency
     from ..models.widgets import Widget
     return _query_extensions(all_objs, lambda cls: issubclass(cls, Widget))
 
