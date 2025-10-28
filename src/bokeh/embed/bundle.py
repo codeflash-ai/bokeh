@@ -14,6 +14,8 @@
 from __future__ import annotations
 
 import logging # isort:skip
+from bokeh.core.has_props import HasProps
+
 log = logging.getLogger(__name__)
 
 #-----------------------------------------------------------------------------
@@ -217,7 +219,19 @@ def bundle_for_objs_and_resources(objs: Sequence[HasProps | Document] | None, re
 
 def _query_extensions(all_objs: set[HasProps], query: Callable[[type[HasProps]], bool]) -> bool:
     names: set[str] = set()
+    # Cache models by their top-level module for faster lookup
+    # Build module-prefix=>model-list only once for performance
+    if not hasattr(_query_extensions, "_module_models_map"):
+        module_models_map: dict[str, list[type[HasProps]]] = {}
+        for model in HasProps.model_class_reverse_map.values():
+            module_name = model.__module__
+            top_module = module_name.split(".", 1)[0]
+            module_models_map.setdefault(top_module, []).append(model)
+        _query_extensions._module_models_map = module_models_map
+    else:
+        module_models_map = _query_extensions._module_models_map
 
+    # Only process unique top-level modules from all_objs
     for obj in all_objs:
         if hasattr(obj, "__implementation__"):
             continue
@@ -228,8 +242,10 @@ def _query_extensions(all_objs: set[HasProps], query: Callable[[type[HasProps]],
             continue
         names.add(name)
 
-        for model in HasProps.model_class_reverse_map.values():
-            if model.__module__.startswith(name):
+        # Directly iterate relevant module's models only
+        models = module_models_map.get(name)
+        if models:
+            for model in models:
                 if query(model):
                     return True
 
