@@ -13,7 +13,14 @@
 #-----------------------------------------------------------------------------
 from __future__ import annotations
 
+from functools import lru_cache
+
+from bokeh.io.state import State
+from bokeh.resources import Resources, ResourcesLike
+from bokeh.settings import settings
+
 import logging # isort:skip
+
 log = logging.getLogger(__name__)
 
 #-----------------------------------------------------------------------------
@@ -146,7 +153,7 @@ def _get_save_resources(state: State, resources: ResourcesLike | None, suppress_
 
         warn("save() called but no resources were supplied and output_file(...) was never called, defaulting to resources.CDN")
 
-    return Resources(mode=settings.resources())
+    return _get_resources_singleton(settings.resources())
 
 def _get_save_title(state: State, title: str | None, suppress_warning: bool) -> str:
     if title is not None:
@@ -172,6 +179,11 @@ def _save_helper(obj: UIElement | Sequence[UIElement], filename: PathLike, resou
 
     with open(filename, mode="w", encoding="utf-8") as f:
         f.write(html)
+
+
+@lru_cache(maxsize=None)
+def _get_resources_singleton(mode):
+    return Resources(mode=mode)
 
 #-----------------------------------------------------------------------------
 # Code
