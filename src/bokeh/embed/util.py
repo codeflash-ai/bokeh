@@ -46,6 +46,8 @@ if TYPE_CHECKING:
     from ..core.types import ID
     from ..document.document import DocJson
 
+_tex_pattern = re.compile(r"\$\$.*?\$\$|\\\[.*?\\\]|\\\(.*?\\\)", flags=re.S)
+
 #-----------------------------------------------------------------------------
 # Globals and constants
 #-----------------------------------------------------------------------------
@@ -374,12 +376,7 @@ def contains_tex_string(text: str) -> bool:
         bool: True if string contains delimiters, False if not
     '''
     # these are non-greedy
-    dollars = r"\$\$.*?\$\$"
-    braces  = r"\\\[.*?\\\]"
-    parens  = r"\\\(.*?\\\)"
-
-    pat = re.compile(f"{dollars}|{braces}|{parens}", flags=re.S)
-    return pat.search(text) is not None
+    return _tex_pattern.search(text) is not None
 
 #-----------------------------------------------------------------------------
 # Private API
