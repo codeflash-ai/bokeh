@@ -13,7 +13,10 @@
 #-----------------------------------------------------------------------------
 from __future__ import annotations
 
+from bokeh.settings import settings
+
 import logging # isort:skip
+
 log = logging.getLogger(__name__)
 
 #-----------------------------------------------------------------------------
@@ -68,6 +71,7 @@ def create_firefox_webdriver(scale_factor: float = 1) -> WebDriver:
     if geckodriver is None:
         raise RuntimeError("geckodriver is not installed or not present on PATH")
 
+    # Delay heavy imports to AFTER checking executable availability to avoid unnecessary loading
     import selenium
     from selenium.webdriver.firefox.options import Options
     from selenium.webdriver.firefox.service import Service
@@ -87,33 +91,38 @@ def create_firefox_webdriver(scale_factor: float = 1) -> WebDriver:
     return Firefox(service=service, options=options)
 
 def create_chromium_webdriver(extra_options: list[str] | None = None, scale_factor: float = 1) -> WebDriver:
-    from selenium.webdriver.chrome.options import Options
-    from selenium.webdriver.chrome.service import Service
-    from selenium.webdriver.chrome.webdriver import WebDriver as Chrome
-
+    # Delay selenium imports until after chromedriver path is resolved for faster fail
     executable_path = settings.chromedriver_path()
     if executable_path is None:
-        for executable in ["chromedriver", "chromium.chromedriver", "chromedriver-binary"]:
+        # Try common chromedriver variant names, avoid constructing list unnecessarily
+        for executable in ("chromedriver", "chromium.chromedriver", "chromedriver-binary"):
             executable_path = which(executable)
             if executable_path is not None:
                 break
         else:
-            raise RuntimeError("chromedriver or its variant is not installed or not present on PATH; "
-                               "use BOKEH_CHROMEDRIVER_PATH to specify a customized chromedriver's location")
+            raise RuntimeError(
+                "chromedriver or its variant is not installed or not present on PATH; "
+                "use BOKEH_CHROMEDRIVER_PATH to specify a customized chromedriver's location"
+            )
+
+    from selenium.webdriver.chrome.options import Options
+    from selenium.webdriver.chrome.service import Service
+    from selenium.webdriver.chrome.webdriver import WebDriver as Chrome
 
     service = Service(executable_path)
 
     options = Options()
-    options.add_argument("--headless")
-    options.add_argument("--hide-scrollbars")
-    options.add_argument(f"--force-device-scale-factor={scale_factor}")
-    options.add_argument("--force-color-profile=srgb")
+    add_argument = options.add_argument  # local reference for faster loop attribute lookup
+    add_argument("--headless")
+    add_argument("--hide-scrollbars")
+    add_argument(f"--force-device-scale-factor={scale_factor}")
+    add_argument("--force-color-profile=srgb")
     if extra_options:
         for op in extra_options:
-            options.add_argument(op)
+            add_argument(op)
 
     if os.getenv("BOKEH_IN_DOCKER") == "1":
-        options.add_argument("--no-sandbox")
+        add_argument("--no-sandbox")
 
     return Chrome(service=service, options=options)
 
