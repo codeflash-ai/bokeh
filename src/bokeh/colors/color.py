@@ -343,14 +343,24 @@ class RGB(Color):
             return f"#{self.r:02x}{self.g:02x}{self.b:02x}"
 
     def to_hsl(self) -> HSL:
-        ''' Return a corresponding HSL color for this RGB color.
+        """ Return a corresponding HSL color for this RGB color.
 
         Returns:
             :class:`~bokeh.colors.HSL`
 
-        '''
-        h, l, s = colorsys.rgb_to_hls(float(self.r)/255, float(self.g)/255, float(self.b)/255)
-        return HSL(round(h*360), s, l, self.a)
+        """
+        # Avoid repeated division and float conversion by precalculating scaled values
+        r_ = self.r
+        g_ = self.g
+        b_ = self.b
+
+        # Use direct division and avoid calling float() repeatedly
+        norm_r = r_ / 255
+        norm_g = g_ / 255
+        norm_b = b_ / 255
+
+        h, l, s = colorsys.rgb_to_hls(norm_r, norm_g, norm_b)
+        return HSL(round(h * 360), s, l, self.a)
 
     def to_rgb(self) -> RGB:
         ''' Return a RGB copy for this RGB color.
