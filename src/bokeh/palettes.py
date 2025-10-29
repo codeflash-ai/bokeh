@@ -412,13 +412,6 @@ from __future__ import annotations
 
 import logging # isort:skip
 log = logging.getLogger(__name__)
-
-#-----------------------------------------------------------------------------
-# Imports
-#-----------------------------------------------------------------------------
-
-# Standard library imports
-import math
 from copy import deepcopy
 from typing import TYPE_CHECKING, TypeAlias
 
@@ -1526,7 +1519,14 @@ def linear_palette(palette: Palette, n: int) -> Palette:
     """
     if n > len(palette):
         raise ValueError(f"Requested {n} colors, function can only return colors up to the base palette's length ({len(palette)})")
-    return tuple( palette[math.floor(i)] for i in np.linspace(0, len(palette)-1, num=n) )
+    # Optimization: Avoid using math.floor (which is slow for every value), and tuple comprehension over floats.
+    # Instead, precompute all indices as ints and index palette directly.
+    # np.linspace returns float, but we want nearest lower integer index for each position.
+    indices = np.linspace(0, len(palette)-1, num=n)
+    # Use astype with np.floor for batch integer conversion.
+    int_indices = indices.astype(int)
+    # Directly build tuple using list comprehension.
+    return tuple(palette[i] for i in int_indices)
 
 def diverging_palette(palette1: Palette, palette2: Palette, n: int, midpoint: float = 0.5) -> Palette:
     """ Generate a new palette by combining exactly two input palettes.
