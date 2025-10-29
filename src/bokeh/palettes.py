@@ -410,7 +410,10 @@ source file.
 #-----------------------------------------------------------------------------
 from __future__ import annotations
 
+from bokeh.colors.util import RGB, NamedColor
+
 import logging # isort:skip
+
 log = logging.getLogger(__name__)
 
 #-----------------------------------------------------------------------------
@@ -1671,9 +1674,13 @@ def interp_palette(palette: Palette, n: int) -> Palette:
     r = np.interp(fractions, integers, rgba_array[:, 0]).astype(np.uint8)
     g = np.interp(fractions, integers, rgba_array[:, 1]).astype(np.uint8)
     b = np.interp(fractions, integers, rgba_array[:, 2]).astype(np.uint8)
+    # Interpolated alpha is floating-point in [0, 255]. We must scale to [0, 1] for to_hex logic.
     a = np.interp(fractions, integers, rgba_array[:, 3]) / 255.0  # Remains floating-point
 
-    return tuple(RGB(*args).to_hex() for args in zip(r, g, b, a))
+    # Fast direct hex conversion, avoiding allocation of many RGB objects.
+    # Guarantee identical behavior and output types.
+    # Use list comprehension for maximal speed.
+    return tuple(rgba_to_hex(int(rr), int(gg), int(bb), float(aa)) for rr, gg, bb, aa in zip(r, g, b, a))
 
 def magma(n: int) -> Palette:
     """ Generate a palette of colors from the Magma palette.
@@ -1925,12 +1932,25 @@ def to_rgba_array(palette: Palette) -> npt.NDArray[np.uint8]:
     """ Convert palette to a numpy array of uint8 RGBA components.
     """
     rgba_array = np.empty((len(palette), 4), dtype=np.uint8)
-
-    for i, color in enumerate(palette):
+    palette_len = len(palette)
+    for i in range(palette_len):
+        color = palette[i]
         rgba = NamedColor.from_string(color)
-        rgba_array[i] = (rgba.r, rgba.g, rgba.b, rgba.a*255)
+        rgba_array[i, 0] = rgba.r
+        rgba_array[i, 1] = rgba.g
+        rgba_array[i, 2] = rgba.b
+        rgba_array[i, 3] = int(rgba.a * 255)
 
     return rgba_array
+
+
+def rgba_to_hex(r: int, g: int, b: int, a: float) -> str:
+    # Replicates RGB.to_hex logic, avoiding per-sample object allocation.
+    if a < 1.0:
+        aa = round(a * 255)
+        return f"#{r:02x}{g:02x}{b:02x}{aa:02x}"
+    else:
+        return f"#{r:02x}{g:02x}{b:02x}"
 
 #-----------------------------------------------------------------------------
 # Private API
