@@ -1526,7 +1526,13 @@ def linear_palette(palette: Palette, n: int) -> Palette:
     """
     if n > len(palette):
         raise ValueError(f"Requested {n} colors, function can only return colors up to the base palette's length ({len(palette)})")
-    return tuple( palette[math.floor(i)] for i in np.linspace(0, len(palette)-1, num=n) )
+    # Optimization: avoid generator/math.floor overhead by using integer numpy indices
+    # np.linspace(..., dtype=int) can produce duplicated indices if palette size < n,
+    # but this only happens with n > palette, which is checked above
+    indices = np.linspace(0, len(palette) - 1, num=n)
+    idx = indices.astype(int)
+    # Use tuple comprehension, not generator, to maintain signature and behavior
+    return tuple(palette[i] for i in idx)
 
 def diverging_palette(palette1: Palette, palette2: Palette, n: int, midpoint: float = 0.5) -> Palette:
     """ Generate a new palette by combining exactly two input palettes.
