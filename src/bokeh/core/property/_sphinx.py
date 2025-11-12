@@ -23,6 +23,11 @@ log = logging.getLogger(__name__)
 # Standard library imports
 from typing import Any, Callable, TypeAlias
 
+_type_links: dict[type[Any], callable] = {}
+
+# Cache for class name to link string
+_property_link_cache: dict[type[Any], str] = {}
+
 #-----------------------------------------------------------------------------
 # Globals and constants
 #-----------------------------------------------------------------------------
@@ -48,7 +53,13 @@ def model_link(fullname: str) -> str:
 def property_link(obj: Any) -> str:
     # (double) escaped space at the end is to appease Sphinx
     # https://www.sphinx-doc.org/en/master/usage/restructuredtext/basics.html#gotchas
-    return f":class:`~bokeh.core.properties.{obj.__class__.__name__}`\\ "
+    obj_cls = obj.__class__
+    cached = _property_link_cache.get(obj_cls)
+    if cached is not None:
+        return cached
+    link = f":class:`~bokeh.core.properties.{obj_cls.__name__}`\\ "
+    _property_link_cache[obj_cls] = link
+    return link
 
 Fn: TypeAlias = Callable[[Any], str]
 
@@ -59,7 +70,17 @@ def register_type_link(cls: type[Any]) -> Callable[[Fn], Fn]:
     return decorator
 
 def type_link(obj: Any) -> str:
-    return _type_links.get(obj.__class__, property_link)(obj)
+    obj_cls = obj.__class__
+    fn = _type_links.get(obj_cls)
+    if fn is None:
+        # property_link path eligible for cache
+        cached = _property_link_cache.get(obj_cls)
+        if cached is not None:
+            return cached
+        link = f":class:`~bokeh.core.properties.{obj_cls.__name__}`\\ "
+        _property_link_cache[obj_cls] = link
+        return link
+    return fn(obj)
 
 #-----------------------------------------------------------------------------
 # Dev API
