@@ -23,6 +23,8 @@ log = logging.getLogger(__name__)
 # Standard library imports
 from typing import Any, Callable, TypeAlias
 
+_type_links: dict[type[Any], callable] = {}
+
 #-----------------------------------------------------------------------------
 # Globals and constants
 #-----------------------------------------------------------------------------
@@ -59,7 +61,7 @@ def register_type_link(cls: type[Any]) -> Callable[[Fn], Fn]:
     return decorator
 
 def type_link(obj: Any) -> str:
-    return _type_links.get(obj.__class__, property_link)(obj)
+    return _type_links.get(type(obj), property_link)(obj)
 
 #-----------------------------------------------------------------------------
 # Dev API
