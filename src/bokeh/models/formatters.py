@@ -889,40 +889,54 @@ def CONTEXTUAL_TIMEDELTA_FORMATTER() -> TimedeltaTickFormatter:
 
 def create_format_table(fields: tuple[str, ...], primary: TickFormatter) -> str:
 
-    def extended_join(character, iterable):
-        return f"{character}{character.join(iterable)}{character}"
-
     def add_row_item(obj, name, string_length):
         value = getattr(obj, name) if obj else ""
         return f"{value:<{string_length}}"
-
-    def create_separator_line(character):
-        return extended_join("+", [character*col_len for col_len in lens])
     column_names = ["Scale", "Format", "1st Context", "2nd Context"]
     # Get formatters for each context level
     secondary = primary.context
     tertiary = secondary.context
 
+
+    # Precompute values once per field to avoid repeated getattr calls for lens computation
+    field_values = []
+    for f in fields:
+        field_values.append((
+            f,
+            getattr(primary, f) if primary else "",
+            getattr(secondary, f) if primary else "",
+            getattr(tertiary, f) if primary else ""
+        ))
+
     lens = [len(name) for name in column_names]
-    lens[0] = max(lens[0], max(map(len, fields)))
-    lens[1] = max(lens[1], max(map(lambda f: len(getattr(primary, f) if primary else ""), fields)))
-    lens[2] = max(lens[2], max(map(lambda f: len(getattr(secondary, f) if primary else ""), fields)))
-    lens[3] = max(lens[3], max(map(lambda f: len(getattr(tertiary, f) if primary else ""), fields)))
+    # Find the max length for each column based on field values
+    lens[0] = max(lens[0], max(len(fv[0]) for fv in field_values))
+    lens[1] = max(lens[1], max(len(fv[1]) for fv in field_values))
+    lens[2] = max(lens[2], max(len(fv[2]) for fv in field_values))
+    lens[3] = max(lens[3], max(len(fv[3]) for fv in field_values))
+
+    # Optimized join - do not use nested f-string, just join with delimiter
+    def create_separator_line(character: str):
+        return '+' + '+'.join(character * col_len for col_len in lens) + '+'
+
     separator = create_separator_line("-")
+    header = '|'.join(f"{value:<{n}}" for value, n in zip(column_names, lens))
     rows = [
         separator,
-        extended_join("|", [f"{value:<{n}}" for value, n in zip(column_names, lens)]),
+        header,
         create_separator_line("="),
     ]
 
-
-    # Build table rows
-    for field in fields:
-        scale = f"{field:<{lens[0]}}"
-        p_fmt = add_row_item(primary, field, lens[1])
-        c1_fmt = add_row_item(secondary, field, lens[2])
-        c2_fmt = add_row_item(tertiary, field, lens[3])
-        rows.append(extended_join("|", [scale, p_fmt, c1_fmt, c2_fmt]))
+    # Build table rows (avoiding repetitive getattr in the loop)
+    for fv in field_values:
+        # scale, p_fmt, c1_fmt, c2_fmt
+        row = '|'.join([
+            f"{fv[0]:<{lens[0]}}",
+            f"{fv[1]:<{lens[1]}}",
+            f"{fv[2]:<{lens[2]}}",
+            f"{fv[3]:<{lens[3]}}",
+        ])
+        rows.append(row)
         rows.append(separator)
     indent = " "*4
     return f"\n{indent}".join(rows)
