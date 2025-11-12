@@ -384,7 +384,8 @@ class HSL(Color):
     '''
 
     def __init__(self, h: float, s: float, l: float, a: float = 1.0) -> None:
-        '''
+        """
+
 
         Args:
             h (int) :
@@ -399,19 +400,20 @@ class HSL(Color):
             a (float, optional) :
                 An alpha value for this color in [0, 1] (default: 1.0)
 
-        '''
+        """
         self.h = h
         self.s = s
         self.l = l
         self.a = a
 
     def copy(self) -> HSL:
-        ''' Return a copy of this color value.
+        """ Return a copy of this color value.
+
 
         Returns:
             :class:`~bokeh.colors.HSL`
 
-        '''
+        """
         return HSL(self.h, self.s, self.l, self.a)
 
     def darken(self, amount: float) -> HSL:
@@ -468,13 +470,15 @@ class HSL(Color):
             return f"hsla({self.h}, {self.s*100}%, {self.l*100}%, {self.a})"
 
     def to_hsl(self) -> HSL:
-        ''' Return a HSL copy for this HSL color.
+        """ Return a HSL copy for this HSL color.
+
 
         Returns:
             :class:`~bokeh.colors.HSL`
 
-        '''
-        return self.copy()
+        """
+        # Directly construct; avoids indirection of extra method call
+        return HSL(self.h, self.s, self.l, self.a)
 
     def to_rgb(self) -> RGB:
         ''' Return a corresponding :class:`~bokeh.colors.RGB` color for
