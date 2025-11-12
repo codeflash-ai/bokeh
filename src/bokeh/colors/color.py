@@ -13,7 +13,10 @@
 #-----------------------------------------------------------------------------
 from __future__ import annotations
 
+from bokeh.core.serialization import Serializable
+
 import logging # isort:skip
+
 log = logging.getLogger(__name__)
 
 #-----------------------------------------------------------------------------
@@ -77,12 +80,11 @@ class Color(Serializable, metaclass=ABCMeta):
             float
 
         '''
-        value = max(value, 0)
-
-        if maximum is not None:
-            return min(value, maximum)
-        else:
-            return value
+        if value < 0:
+            value = 0
+        if maximum is not None and value > maximum:
+            return maximum
+        return value
 
     @abstractmethod
     def copy(self) -> Self:
