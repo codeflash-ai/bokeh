@@ -14,6 +14,10 @@
 from __future__ import annotations
 
 import logging # isort:skip
+from bokeh.core.has_props import HasProps
+from bokeh.resources import Resources
+from bokeh.settings import settings
+
 log = logging.getLogger(__name__)
 
 #-----------------------------------------------------------------------------
@@ -272,10 +276,12 @@ def _bundle_extensions(objs: set[HasProps] | None, resources: Resources) -> list
 
     all_objs = objs if objs is not None else HasProps.model_class_reverse_map.values()
 
+    server_prefix = URL(resources.root_url) / "static" / "extensions"
+
     for obj in all_objs:
         if hasattr(obj, "__implementation__"):
             continue
-        name = obj.__view_module__.split(".")[0]
+        name = obj.__view_module__.split(".", 1)[0]
         if name == "bokeh":
             continue
         if name in names:
@@ -290,7 +296,6 @@ def _bundle_extensions(objs: set[HasProps] | None, resources: Resources) -> list
         if not ext_path.exists():
             continue
 
-        server_prefix = URL(resources.root_url) / "static" / "extensions"
         package_path = base_dir / "package.json"
 
         pkg: Pkg | None = None
