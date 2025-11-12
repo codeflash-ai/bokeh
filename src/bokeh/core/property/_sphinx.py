@@ -48,7 +48,7 @@ def model_link(fullname: str) -> str:
 def property_link(obj: Any) -> str:
     # (double) escaped space at the end is to appease Sphinx
     # https://www.sphinx-doc.org/en/master/usage/restructuredtext/basics.html#gotchas
-    return f":class:`~bokeh.core.properties.{obj.__class__.__name__}`\\ "
+    return f":class:`~bokeh.core.properties.{type(obj).__name__}`\\ "
 
 Fn: TypeAlias = Callable[[Any], str]
 
