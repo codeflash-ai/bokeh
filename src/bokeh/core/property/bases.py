@@ -20,6 +20,9 @@
 from __future__ import annotations
 
 import logging # isort:skip
+from bokeh.core.property.descriptor_factory import PropertyDescriptorFactory
+from bokeh.core.property.singletons import Intrinsic, Undefined
+
 log = logging.getLogger(__name__)
 
 #-----------------------------------------------------------------------------
@@ -433,7 +436,8 @@ class Property(PropertyDescriptorFactory[T]):
         return self
 
     def replace(self, old: type[Property[Any]], new: Property[Any]) -> Property[Any]:
-        if self.__class__ == old:
+        # Use identity comparison for class type check, it's both correct and slightly faster
+        if type(self) is old:
             return new
         else:
             return self
