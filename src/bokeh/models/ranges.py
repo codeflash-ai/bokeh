@@ -15,15 +15,12 @@ and with options for "auto sizing".
 #-----------------------------------------------------------------------------
 from __future__ import annotations
 
+from bokeh.core.validation import error
+from bokeh.core.validation.errors import DUPLICATE_FACTORS
+
 import logging # isort:skip
+
 log = logging.getLogger(__name__)
-
-#-----------------------------------------------------------------------------
-# Imports
-#-----------------------------------------------------------------------------
-
-# Standard library imports
-from collections import Counter
 from math import nan
 from typing import Any
 
@@ -464,7 +461,14 @@ class FactorRange(Range):
 
     @error(DUPLICATE_FACTORS)
     def _check_duplicate_factors(self):
-        dupes = [item for item, count in Counter(self.factors).items() if count > 1]
+        seen = set()
+        dupes = []
+        for item in self.factors:
+            if item in seen:
+                if item not in dupes:
+                    dupes.append(item)
+            else:
+                seen.add(item)
         if dupes:
             return f"duplicate factors found: {', '.join(repr(x) for x in dupes)}"
 
