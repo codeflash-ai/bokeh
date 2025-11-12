@@ -14,6 +14,12 @@
 from __future__ import annotations
 
 import logging # isort:skip
+from bokeh.core.validation import error
+from bokeh.core.validation.errors import INCOMPATIBLE_SCALE_AND_RANGE
+from bokeh.models.layouts import LayoutDOM
+from bokeh.models.ranges import DataRange1d, FactorRange, Range1d
+from bokeh.models.scales import CategoricalScale, LinearScale, LogScale
+
 log = logging.getLogger(__name__)
 
 #-----------------------------------------------------------------------------
@@ -474,24 +480,53 @@ class Plot(LayoutDOM):
     @error(INCOMPATIBLE_SCALE_AND_RANGE)
     def _check_compatible_scale_and_ranges(self) -> str | None:
         incompatible: list[str] = []
-        x_ranges = list(self.extra_x_ranges.values())
-        if self.x_range: x_ranges.append(self.x_range)
-        y_ranges = list(self.extra_y_ranges.values())
-        if self.y_range: y_ranges.append(self.y_range)
 
-        if self.x_scale is not None:
+        # Avoid unnecessary dict allocations by only creating lists when needed
+        x_range = self.x_range
+        y_range = self.y_range
+
+        # Precompute extra ranges only if they exist or are used
+        extra_x_ranges = self.extra_x_ranges
+        extra_y_ranges = self.extra_y_ranges
+
+        # Inline concatenation for performance
+        if x_range is not None:
+            # Use list concatenation only when necessary
+            x_ranges = [*extra_x_ranges.values(), x_range] if extra_x_ranges else [x_range]
+        else:
+            x_ranges = list(extra_x_ranges.values()) if extra_x_ranges else []
+
+        if y_range is not None:
+            y_ranges = [*extra_y_ranges.values(), y_range] if extra_y_ranges else [y_range]
+        else:
+            y_ranges = list(extra_y_ranges.values()) if extra_y_ranges else []
+
+        x_scale = self.x_scale
+        if x_scale is not None and x_ranges:
+            # Check type once, then use more specific checks; avoid repeated isinstance
+            x_scale_is_linear_log = isinstance(x_scale, (LinearScale, LogScale))
+            x_scale_is_categorical = isinstance(x_scale, CategoricalScale)
             for rng in x_ranges:
-                if isinstance(rng, (DataRange1d, Range1d)) and not isinstance(self.x_scale, (LinearScale, LogScale)):
-                    incompatible.append(f"incompatibility on x-dimension: {rng}, {self.x_scale}")
-                elif isinstance(rng, FactorRange) and not isinstance(self.x_scale, CategoricalScale):
-                    incompatible.append(f"incompatibility on x-dimension: {rng}, {self.x_scale}")
+                if isinstance(rng, (DataRange1d, Range1d)):
+                    if not x_scale_is_linear_log:
+                        incompatible.append(f"incompatibility on x-dimension: {rng}, {x_scale}")
+                elif isinstance(rng, FactorRange):
+                    if not x_scale_is_categorical:
+                        incompatible.append(f"incompatibility on x-dimension: {rng}, {x_scale}")
 
-        if self.y_scale is not None:
+        y_scale = self.y_scale
+        if y_scale is not None and y_ranges:
+            y_scale_is_linear_log = isinstance(y_scale, (LinearScale, LogScale))
+            y_scale_is_categorical = isinstance(y_scale, CategoricalScale)
             for rng in y_ranges:
-                if isinstance(rng, (DataRange1d, Range1d)) and not isinstance(self.y_scale, (LinearScale, LogScale)):
-                    incompatible.append(f"incompatibility on y-dimension: {rng}, {self.y_scale}")
-                elif isinstance(rng, FactorRange) and not isinstance(self.y_scale, CategoricalScale):
-                    incompatible.append(f"incompatibility on y-dimension: {rng}, {self.y_scale}")
+                if isinstance(rng, (DataRange1d, Range1d)):
+                    if not y_scale_is_linear_log:
+                        incompatible.append(f"incompatibility on y-dimension: {rng}, {y_scale}")
+                elif isinstance(rng, FactorRange):
+                    if not y_scale_is_categorical:
+                        incompatible.append(f"incompatibility on y-dimension: {rng}, {y_scale}")
+
+        # No join if incompatible is empty
 
         if incompatible:
             return ", ".join(incompatible) + f" [{self}]"
