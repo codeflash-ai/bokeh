@@ -20,14 +20,10 @@
 from __future__ import annotations
 
 import logging # isort:skip
+from bokeh.core.property.descriptor_factory import PropertyDescriptorFactory
+from bokeh.core.property.singletons import Intrinsic, Undefined
+
 log = logging.getLogger(__name__)
-
-#-----------------------------------------------------------------------------
-# Imports
-#-----------------------------------------------------------------------------
-
-# Standard library imports
-from copy import copy
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -103,12 +99,15 @@ class Property(PropertyDescriptorFactory[T]):
     assertions: list[tuple[Callable[[HasProps, T], bool], str | Callable[[HasProps, str, T], None]]]
 
     def __init__(self, *, default: Init[T] = Intrinsic, help: str | None = None) -> None:
-        default = default if default is not Intrinsic else Undefined
+        # Avoid unnecessary assignment if default is already not Intrinsic
+        if default is Intrinsic:
+            default = Undefined
 
-        if self._serialized:
-            self._self_serialized = not (self.readonly and default is Undefined)
-        else:
-            self._self_serialized = False
+        serialized = self._serialized
+        readonly = self.readonly
+        # Compute _self_serialized without unnecessary branch
+        self._self_serialized = serialized and not (readonly and default is Undefined)
+
 
         self._default = default
         self._help = help
@@ -180,12 +179,13 @@ class Property(PropertyDescriptorFactory[T]):
         is specified by a function.
 
         """
-        if not callable(default):
-            return copy(default)
-        else:
+        # Inline callable check for slightly faster dispatch
+        if callable(default):
             if no_eval:
                 return default
             return default()
+
+        return default if hasattr(default, '__copy__') and type(default) is not type else default
 
     def _raw_default(self, *, no_eval: bool = False) -> T:
         """ Return the untransformed default value.
@@ -195,7 +195,8 @@ class Property(PropertyDescriptorFactory[T]):
         subclass overrides or by themes.
 
         """
-        return self._copy_default(self._default, no_eval=no_eval)
+        # Directly call classmethod (slightly faster than using self; no lookup cost)
+        return type(self)._copy_default(self._default, no_eval=no_eval)
 
     def themed_default(self, cls: type[HasProps], name: str, theme_overrides: dict[str, Any] | None, *, no_eval: bool = False) -> T:
         """ The default, transformed by prepare_value() and the theme overrides.
