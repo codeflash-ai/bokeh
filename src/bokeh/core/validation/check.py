@@ -14,6 +14,8 @@
 from __future__ import annotations
 
 import logging # isort:skip
+from bokeh.core.validation.issue import Warning
+
 log = logging.getLogger(__name__)
 
 #-----------------------------------------------------------------------------
@@ -34,6 +36,8 @@ from typing import (
 from ...model import Model
 from ...settings import settings
 from .issue import Warning
+
+__silencers__: set[Warning] = set()
 
 #-----------------------------------------------------------------------------
 # Globals and constants
@@ -71,7 +75,8 @@ class Validator(Protocol):
     validator_type: ValidatorType
 
 def silence(warning: Warning, silence: bool = True) -> set[Warning]:
-    ''' Silence a particular warning on all Bokeh models.
+    """ Silence a particular warning on all Bokeh models.
+
 
     Args:
         warning (Warning) : Bokeh warning to silence
@@ -98,13 +103,14 @@ def silence(warning: Warning, silence: bool = True) -> set[Warning]:
         >>> bokeh.core.validation.silence(EMPTY_LAYOUT, False)
         set()
 
-    '''
-    if not isinstance(warning, Warning):
+    """
+    if type(warning) is not Warning:
         raise ValueError(f"Input to silence should be a warning object - not of type {type(warning)}")
     if silence:
         __silencers__.add(warning)
-    elif warning in __silencers__:
-        __silencers__.remove(warning)
+    else:
+        # Avoiding 'warning in __silencers__' check, since set.remove is already safe for KeyError
+        __silencers__.discard(warning)
     return __silencers__
 
 def is_silenced(warning: Warning) -> bool:
