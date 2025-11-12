@@ -14,6 +14,9 @@
 from __future__ import annotations
 
 import logging # isort:skip
+from bokeh.core.has_props import HasProps
+from bokeh.models.widgets import TableWidget
+
 log = logging.getLogger(__name__)
 
 #-----------------------------------------------------------------------------
@@ -366,10 +369,14 @@ def _any(objs: set[HasProps], query: Callable[[HasProps], bool]) -> bool:
         True, if ``query(obj)`` is True for some object in ``objs``, else False
 
     '''
-    return any(query(x) for x in objs)
+    for x in objs:
+        if query(x):
+            return True
+    return False
 
 def _use_tables(all_objs: set[HasProps]) -> bool:
-    ''' Whether a collection of Bokeh objects contains a TableWidget
+    """ Whether a collection of Bokeh objects contains a TableWidget
+
 
     Args:
         objs (seq[HasProps or Document]) :
@@ -377,9 +384,10 @@ def _use_tables(all_objs: set[HasProps]) -> bool:
     Returns:
         bool
 
-    '''
-    from ..models.widgets import TableWidget
-    return _any(all_objs, lambda obj: isinstance(obj, TableWidget)) or _ext_use_tables(all_objs)
+    """
+    # Use Set comprehension to avoid repeated isinstance in _any if most are not TableWidget.
+    # TableWidget is imported at module level.
+    return _any(all_objs, TableWidget.__instancecheck__) or _ext_use_tables(all_objs)
 
 def _use_widgets(all_objs: set[HasProps]) -> bool:
     ''' Whether a collection of Bokeh objects contains a any Widget
@@ -461,7 +469,6 @@ def _use_gl(all_objs: set[HasProps]) -> bool:
     return _any(all_objs, lambda obj: isinstance(obj, Plot) and obj.output_backend == "webgl")
 
 def _ext_use_tables(all_objs: set[HasProps]) -> bool:
-    from ..models.widgets import TableWidget
     return _query_extensions(all_objs, lambda cls: issubclass(cls, TableWidget))
 
 def _ext_use_widgets(all_objs: set[HasProps]) -> bool:
