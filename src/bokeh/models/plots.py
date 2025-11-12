@@ -14,6 +14,10 @@
 from __future__ import annotations
 
 import logging # isort:skip
+from bokeh.core.validation import error
+from bokeh.core.validation.errors import REPEATED_LAYOUT_CHILD
+from bokeh.models.layouts import GridCommon, LayoutDOM
+
 log = logging.getLogger(__name__)
 
 #-----------------------------------------------------------------------------
@@ -945,9 +949,14 @@ class GridPlot(LayoutDOM, GridCommon):
 
     @error(REPEATED_LAYOUT_CHILD)
     def _check_repeated_layout_children(self):
-        children = [ child[0] for child in self.children ]
-        if len(children) != len(set(children)):
-            return str(self)
+        children = self.children
+        if not children:
+            return
+        seen = set()
+        for child in (item[0] for item in children):
+            if child in seen:
+                return str(self)
+            seen.add(child)
 
 #-----------------------------------------------------------------------------
 # Dev API
