@@ -303,11 +303,11 @@ def _base64_encode(decoded: bytes | str) -> str:
 
 def _base64_decode(encoded: bytes | str) -> bytes:
     # base64 lib both takes and returns bytes, we want to work with strings
-    encoded_as_bytes = codecs.encode(encoded, 'ascii') if isinstance(encoded, str) else encoded
+    encoded_as_bytes = encoded.encode('ascii') if isinstance(encoded, str) else encoded
     # put the padding back
     mod = len(encoded_as_bytes) % 4
     if mod != 0:
-        encoded_as_bytes = encoded_as_bytes + (b"=" * (4 - mod))
+        encoded_as_bytes += b'==='[:4-mod]
     assert (len(encoded_as_bytes) % 4) == 0
     return base64.urlsafe_b64decode(encoded_as_bytes)
 
