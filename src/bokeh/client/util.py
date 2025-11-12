@@ -55,14 +55,15 @@ def server_url_for_websocket_url(url: str) -> str:
 
     '''
     if url.startswith("ws:"):
-        reprotocoled = "http" + url[2:]
+        if not url.endswith("/ws"):
+            raise ValueError("websocket URL does not end in /ws")
+        return "http" + url[2:-2]
     elif url.startswith("wss:"):
-        reprotocoled = "https" + url[3:]
+        if not url.endswith("/ws"):
+            raise ValueError("websocket URL does not end in /ws")
+        return "https" + url[3:-2]
     else:
         raise ValueError("URL has non-websocket protocol " + url)
-    if not reprotocoled.endswith("/ws"):
-        raise ValueError("websocket URL does not end in /ws")
-    return reprotocoled[:-2]
 
 def websocket_url_for_server_url(url: str) -> str:
     ''' Convert an ``http(s)`` URL for a Bokeh server websocket endpoint into
