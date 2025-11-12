@@ -14,6 +14,8 @@
 from __future__ import annotations
 
 import logging # isort:skip
+from bokeh.core.has_props import HasProps
+
 log = logging.getLogger(__name__)
 
 #-----------------------------------------------------------------------------
@@ -218,6 +220,13 @@ def bundle_for_objs_and_resources(objs: Sequence[HasProps | Document] | None, re
 def _query_extensions(all_objs: set[HasProps], query: Callable[[type[HasProps]], bool]) -> bool:
     names: set[str] = set()
 
+    # Precompute models by top-level package name for efficient lookup
+    model_map: dict[str, list[type[HasProps]]] = {}
+    for model in HasProps.model_class_reverse_map.values():
+        name = model.__module__.split(".", 1)[0]
+        if name != "bokeh":
+            model_map.setdefault(name, []).append(model)
+
     for obj in all_objs:
         if hasattr(obj, "__implementation__"):
             continue
@@ -228,10 +237,9 @@ def _query_extensions(all_objs: set[HasProps], query: Callable[[type[HasProps]],
             continue
         names.add(name)
 
-        for model in HasProps.model_class_reverse_map.values():
-            if model.__module__.startswith(name):
-                if query(model):
-                    return True
+        for model in model_map.get(name, ()):
+            if query(model):
+                return True
 
     return False
 
