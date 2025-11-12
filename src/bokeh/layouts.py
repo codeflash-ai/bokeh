@@ -14,6 +14,8 @@
 from __future__ import annotations
 
 import logging # isort:skip
+from bokeh.models import Tool, ToolProxy
+
 log = logging.getLogger(__name__)
 
 #-----------------------------------------------------------------------------
@@ -604,12 +606,8 @@ MergeFn: TypeAlias = Callable[[type[T], list[T]], Tool | ToolProxy | None]
 def group_tools(tools: list[Tool | ToolProxy], *, merge: MergeFn[Tool] | None = None,
         ignore: set[str] | None = None) -> list[Tool | ToolProxy]:
     """ Group common tools into tool proxies. """
-    @dataclass
-    class ToolEntry:
-        tool: Tool
-        props: Any
-
-    by_type: defaultdict[type[Tool], list[ToolEntry]] = defaultdict(list)
+    
+    by_type: defaultdict[type[Tool], list[tuple[Tool, Any]]] = defaultdict(list)
     computed: list[Tool | ToolProxy] = []
 
     if ignore is None:
@@ -619,27 +617,31 @@ def group_tools(tools: list[Tool | ToolProxy], *, merge: MergeFn[Tool] | None = 
         if isinstance(tool, ToolProxy):
             computed.append(tool)
         else:
-            props = tool.properties_with_values()
-            for attr in ignore:
-                if attr in props:
-                    del props[attr]
-            by_type[tool.__class__].append(ToolEntry(tool, props))
+            props = {k: v for k, v in tool.properties_with_values().items() if k not in ignore}
+            by_type[tool.__class__].append((tool, props))
 
     for cls, entries in by_type.items():
         if merge is not None:
-            merged = merge(cls, [entry.tool for entry in entries])
+            merged = merge(cls, [entry[0] for entry in entries])
             if merged is not None:
                 computed.append(merged)
                 continue
 
-        while entries:
-            head, *tail = entries
-            group: list[Tool] = [head.tool]
-            for item in list(tail):
-                if item.props == head.props:
-                    group.append(item.tool)
-                    entries.remove(item)
-            entries.remove(head)
+        remaining = entries
+        while remaining:
+            head = remaining[0]
+            head_tool, head_props = head
+
+            group: list[Tool] = [head_tool]
+            mask = [True]
+            for tool_entry in remaining[1:]:
+                _, props = tool_entry
+                if props == head_props:
+                    group.append(tool_entry[0])
+                    mask.append(True)
+                else:
+                    mask.append(False)
+            remaining = [entry for entry, keep in zip(remaining, mask) if not keep]
 
             if merge is not None and (tool := merge(cls, group)) is not None:
                 computed.append(tool)
