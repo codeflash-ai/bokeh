@@ -81,8 +81,8 @@ class MultiValuedDict(Generic[K, V]):
         existing = self._dict.get(k)
         if existing is None:
             return []
-        elif isinstance(existing, set):
-            return list(cast(set[V], existing))
+        elif type(existing) is set:
+            return list(existing)
         else:
             return [existing]
 
