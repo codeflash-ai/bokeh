@@ -48,7 +48,8 @@ def model_link(fullname: str) -> str:
 def property_link(obj: Any) -> str:
     # (double) escaped space at the end is to appease Sphinx
     # https://www.sphinx-doc.org/en/master/usage/restructuredtext/basics.html#gotchas
-    return f":class:`~bokeh.core.properties.{obj.__class__.__name__}`\\ "
+    cls_name = type(obj).__name__
+    return f":class:`~bokeh.core.properties.{cls_name}`\\ "
 
 Fn: TypeAlias = Callable[[Any], str]
 
@@ -59,7 +60,13 @@ def register_type_link(cls: type[Any]) -> Callable[[Fn], Fn]:
     return decorator
 
 def type_link(obj: Any) -> str:
-    return _type_links.get(obj.__class__, property_link)(obj)
+    obj_type = type(obj)
+    fn = _type_links.get(obj_type)
+    if fn is not None:
+        return fn(obj)
+    # Inline default (property_link) to avoid extra call stack in the most common case
+    cls_name = obj_type.__name__
+    return f":class:`~bokeh.core.properties.{cls_name}`\\ "
 
 #-----------------------------------------------------------------------------
 # Dev API
