@@ -91,8 +91,7 @@ class MultiValuedDict(Generic[K, V]):
 
         '''
         existing = self._dict.get(k)
-        if isinstance(existing, set):
-            existing = cast(set[V], existing)
+        if type(existing) is set:
             if len(existing) == 1:
                 return next(iter(existing))
             else:
