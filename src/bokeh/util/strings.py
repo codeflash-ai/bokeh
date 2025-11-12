@@ -57,7 +57,9 @@ def indent(text: str, n: int = 2, ch: str = " ") -> str:
 
     '''
     padding = ch * n
-    return "\n".join(padding + line for line in text.split("\n"))
+    if not text:
+        return padding
+    return padding + text.replace("\n", f"\n{padding}")
 
 
 def nice_join(seq: Iterable[Any], *, sep: str = ", ", conjunction: str | None = "or") -> str:
