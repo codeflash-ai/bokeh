@@ -377,11 +377,11 @@ def _process_resources(resources: Literal["default"] | None) -> str:
         str
 
     '''
-    if resources not in ("default", None):
-        raise ValueError("`resources` must be either 'default' or None.")
     if resources is None:
         return "&resources=none"
-    return ""
+    elif resources == "default":
+        return ""
+    raise ValueError("`resources` must be either 'default' or None.")
 
 def _src_path(url: str, elementid: ID) -> str:
     ''' Return a base autoload URL for a given element ID
