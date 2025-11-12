@@ -14,6 +14,9 @@
 from __future__ import annotations
 
 import logging # isort:skip
+from bokeh.core.has_props import HasProps
+from bokeh.document.document import Document
+
 log = logging.getLogger(__name__)
 
 #-----------------------------------------------------------------------------
@@ -348,9 +351,9 @@ def _all_objs(objs: Sequence[HasProps | Document]) -> set[HasProps]:
     for obj in objs:
         if isinstance(obj, Document):
             for root in obj.roots:
-                all_objs |= root.references()
+                all_objs.update(root.references())
         else:
-            all_objs |= obj.references()
+            all_objs.update(obj.references())
 
     return all_objs
 
