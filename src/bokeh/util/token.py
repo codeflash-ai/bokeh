@@ -296,9 +296,9 @@ def _base64_encode(decoded: bytes | str) -> str:
     decoded_as_bytes = _ensure_bytes(decoded)
     # TODO: urlsafe_b64encode only accepts bytes input, not bytes | None.
     # Perhaps we can change _ensure_bytes change return type from bytes | None to bytes
-    encoded = codecs.decode(base64.urlsafe_b64encode(decoded_as_bytes), 'ascii')  # type: ignore
+    encoded_bytes = base64.urlsafe_b64encode(decoded_as_bytes)  # type: ignore
     # remove padding '=' chars that cause trouble
-    return str(encoded.rstrip('='))
+    return encoded_bytes.rstrip(b'=').decode('ascii')
 
 
 def _base64_decode(encoded: bytes | str) -> bytes:
