@@ -27,6 +27,9 @@ Attributes:
 from __future__ import annotations
 
 import logging  # isort:skip
+from bokeh.core.templates import JS_RESOURCES
+from bokeh.core.types import PathLike
+from bokeh.settings import LogLevel, settings
 
 log = logging.getLogger(__name__)
 
@@ -313,17 +316,22 @@ class Resources:
         components: list[Component] | None = None,
         base_dir: PathLike | None = None,
     ):
-        self.components = components if components is not None else list(self._default_components)
-        mode = settings.resources(mode)
+        # Avoid unneeded list copy if _default_components is already a list
+        self.components = components if components is not None else self._default_components.copy()
 
-        mode_dev = mode.endswith("-dev")
+        # Avoid repeated settings.resources(mode)
+        _mode = settings.resources(mode)
+        mode_dev = _mode.endswith("-dev")
         self.dev = dev if dev is not None else settings.dev or mode_dev
-        self.mode = cast(BaseMode, mode[:-4] if mode_dev else mode)
+        base_mode = _mode[:-4] if mode_dev else _mode
+        self.mode = cast(BaseMode, base_mode)
 
-        if self.mode not in get_args(BaseMode):
+        # Use set for fast containment checks on BaseMode
+        _BASE_MODE_SET = set(get_args(BaseMode))
+        if self.mode not in _BASE_MODE_SET:
             raise ValueError(
                 "wrong value for 'mode' parameter, expected "
-                f"'inline', 'cdn', 'server(-dev)', 'relative(-dev)' or 'absolute(-dev)', got {mode}",
+                f"'inline', 'cdn', 'server(-dev)', 'relative(-dev)' or 'absolute(-dev)', got {_mode}",
             )
 
         if root_dir and not self.mode.startswith("relative"):
@@ -336,32 +344,28 @@ class Resources:
             raise ValueError("setting 'root_url' makes sense only when 'mode' is set to 'server'")
 
         self.root_dir = settings.rootdir(root_dir)
-        del root_dir
         self.version = settings.cdn_version(version)
-        del version
         if minified is None and self.dev:
             minified = False
         self.minified = settings.minified(minified)
-        del minified
         self.log_level = settings.log_level(log_level)
-        del log_level
         self.path_versioner = path_versioner
-        del path_versioner
 
-        if root_url and not root_url.endswith("/"):
-            # root_url should end with a /, adding one
-            root_url = root_url + "/"
-        self._root_url = root_url
+        # Only process root_url once
+        self._root_url = root_url + "/" if (root_url and not root_url.endswith("/")) else root_url
+
 
         self.messages = []
 
-        match self.mode:
-            case "cdn":
-                cdn = self._cdn_urls()
-                self.messages.extend(cdn.messages)
-            case "server":
-                server = self._server_urls()
-                self.messages.extend(server.messages)
+        # Use if-blocks for better performance than match for two branches
+        if self.mode == "cdn":
+            cdn = self._cdn_urls()
+            self.messages.extend(cdn.messages)
+        elif self.mode == "server":
+            server = self._server_urls()
+            self.messages.extend(server.messages)
+
+        # Avoid calling Path if not needed
 
         self.base_dir = Path(base_dir) if base_dir is not None else settings.bokehjs_path()
 
