@@ -27,6 +27,8 @@ Attributes:
 from __future__ import annotations
 
 import logging  # isort:skip
+from bokeh.core.types import PathLike
+from bokeh.settings import LogLevel, settings
 
 log = logging.getLogger(__name__)
 
@@ -420,7 +422,12 @@ class Resources:
     # Public methods ----------------------------------------------------------
 
     def components_for(self, kind: Kind) -> list[Component]:
-        return [comp for comp in self.components if comp in self._component_defs[kind]]
+        # Use set intersection for faster filtering on large component lists
+        kind_comps = self._component_defs[kind]
+        if not kind_comps:
+            return []
+        kind_set = set(kind_comps)
+        return [comp for comp in self.components if comp in kind_set]
 
     def _file_paths(self, kind: Kind) -> list[Path]:
         minified = ".min" if self.minified else ""
