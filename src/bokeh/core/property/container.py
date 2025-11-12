@@ -14,6 +14,9 @@
 from __future__ import annotations
 
 import logging # isort:skip
+from bokeh.core.property.bases import ContainerProperty, Init, Property, TypeOrInst
+from bokeh.core.property.singletons import Undefined
+
 log = logging.getLogger(__name__)
 
 #-----------------------------------------------------------------------------
@@ -112,9 +115,11 @@ class Seq(ContainerProperty[T]):
 
     @classmethod
     def _is_seq_like(cls, value: Any) -> bool:
-        return (isinstance(value, (Container, Sized, Iterable))
-                and hasattr(value, "__getitem__") # NOTE: this is what makes it disallow set type
-                and not isinstance(value, Mapping))
+        if isinstance(value, Mapping):
+            return False
+        if not hasattr(value, "__getitem__"):
+            return False
+        return isinstance(value, (Container, Sized, Iterable))
 
 class List(Seq[T]):
     """ Accept Python list values.
