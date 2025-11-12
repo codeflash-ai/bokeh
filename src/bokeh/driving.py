@@ -87,7 +87,7 @@ def bounce(sequence: Sequence[int]) -> partial[Callable[[], None]]:
 
     '''
     N = len(sequence)
-    def f(i: int) -> int:
+    def f(i: int, N=N, sequence=sequence) -> int:
         div, mod = divmod(i, N)
         if div % 2 == 0:
             return sequence[mod]
