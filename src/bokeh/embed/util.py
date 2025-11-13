@@ -14,6 +14,11 @@
 from __future__ import annotations
 
 import logging # isort:skip
+from bokeh.core.types import ID
+from bokeh.document.document import DocJson, Document
+from bokeh.model import Model, collect_models
+from bokeh.util.serialization import make_globally_unique_css_safe_id, make_globally_unique_id
+
 log = logging.getLogger(__name__)
 
 #-----------------------------------------------------------------------------
@@ -293,9 +298,9 @@ def standalone_docs_json(models: Sequence[Model | Document]) -> dict[ID, DocJson
 
 def standalone_docs_json_and_render_items(models: Model | Document | Sequence[Model | Document], *,
         suppress_callback_warning: bool = False) -> tuple[dict[ID, DocJson], list[RenderItem]]:
-    '''
+    """
 
-    '''
+    """
     if isinstance(models, (Model, Document)):
         models = [models]
 
@@ -317,38 +322,41 @@ def standalone_docs_json_and_render_items(models: Model | Document | Sequence[Mo
             if doc is None:
                 raise ValueError("A Bokeh Model must be part of a Document to render as standalone content")
 
-        if doc not in docs:
-            docs[doc] = (make_globally_unique_id(), dict())
+        # Use setdefault to avoid repeated key checking
+        doc_tuple = docs.setdefault(doc, (make_globally_unique_id(), {}))
+        (docid, roots) = doc_tuple
 
-        (docid, roots) = docs[doc]
 
         if model is not None:
             roots[model] = make_globally_unique_css_safe_id()
         else:
-            for model in doc.roots:
-                roots[model] = make_globally_unique_css_safe_id()
+            # Use direct assignment for each doc root
+            for root_model in doc.roots:
+                roots[root_model] = make_globally_unique_css_safe_id()
+
 
     docs_json: dict[ID, DocJson] = {}
     for doc, (docid, _) in docs.items():
         docs_json[docid] = doc.to_json(deferred=False)
 
-    render_items: list[RenderItem] = []
-    for _, (docid, roots) in docs.items():
-        render_items.append(RenderItem(docid, roots=roots))
+    # Preallocate render_items for all docs in one pass
+    render_items: list[RenderItem] = [
+        RenderItem(docid, roots=roots)
+        for _, (docid, roots) in docs.items()
+    ]
+
 
     return (docs_json, render_items)
 
 def submodel_has_python_callbacks(models: Sequence[Model | Document]) -> bool:
-    ''' Traverses submodels to check for Python (event) callbacks
+    """ Traverses submodels to check for Python (event) callbacks
 
-    '''
-    has_python_callback = False
-    for model in collect_models(models):
-        if len(model._callbacks) > 0 or len(model._event_callbacks) > 0:
-            has_python_callback = True
-            break
-
-    return has_python_callback
+    """
+    # Use any() with generator for short-circuit early-out
+    return any(
+        (len(model._callbacks) > 0 or len(model._event_callbacks) > 0)
+        for model in collect_models(models)
+    )
 
 def is_tex_string(text: str) -> bool:
     ''' Whether a string begins and ends with MathJax default delimiters

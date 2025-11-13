@@ -27,6 +27,18 @@ figure below:
 from __future__ import annotations
 
 import logging # isort:skip
+from bokeh.themes import Theme, default as default_theme
+from bokeh.core.has_props import is_DataModel
+from bokeh.core.serialization import Serializer
+from bokeh.core.templates import FILE
+from bokeh.document.callbacks import DocumentCallbackManager
+from bokeh.document.config import DocumentConfig
+from bokeh.document.json import DocJson
+from bokeh.document.models import DocumentModelManager
+from bokeh.document.modules import DocumentModuleManager
+from bokeh.model import Model
+from bokeh.util.version import __version__
+
 log = logging.getLogger(__name__)
 
 #-----------------------------------------------------------------------------
@@ -755,16 +767,22 @@ side of a communications channel while it was being removed on the other end.\
             self.callbacks.trigger_on_change(TitleChangedEvent(self, title, setter))
 
     def to_json(self, *, deferred: bool = True) -> DocJson:
-        ''' Convert this document to a JSON-serializable object.
+        """ Convert this document to a JSON-serializable object.
+
 
         Return:
             DocJson
 
-        '''
+        """
         from ..model import Model
         from .json import DocJson
 
-        data_models = [ model for model in Model.model_class_reverse_map.values() if is_DataModel(model) ]
+        # Optimization: Use generator and cache list only if needed
+        data_models = []
+        for model in Model.model_class_reverse_map.values():
+            if is_DataModel(model):
+                data_models.append(model)
+
 
         serializer = Serializer(deferred=deferred)
         defs = serializer.encode(data_models)
