@@ -214,7 +214,9 @@ class PropertyValueList(PropertyValueContainer, list[T]):
     """
 
     def __init__(self, *args, **kwargs) -> None:
-        super().__init__(*args, **kwargs)
+        # Directly call list's __init__ then PropertyValueContainer's __init__, avoiding super() MRO
+        list.__init__(self, *args, **kwargs)
+        PropertyValueContainer.__init__(self)
 
     def _saved_copy(self) -> list[T]:
         return list(self)
@@ -227,7 +229,8 @@ class PropertyValueList(PropertyValueContainer, list[T]):
     # x += y
     @notify_owner
     def __iadd__(self, y):
-        return super().__iadd__(y)
+        # Avoid super() to save method resolution time in simple scenarios
+        return list.__iadd__(self, y)
 
     # x *= y
     @notify_owner
