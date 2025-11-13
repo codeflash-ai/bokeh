@@ -14,6 +14,11 @@
 from __future__ import annotations
 
 import logging # isort:skip
+from bokeh.core.has_props import abstract
+from bokeh.core.validation import error
+from bokeh.core.validation.errors import MIN_PREFERRED_MAX_HEIGHT
+from bokeh.models.ui.panes import Pane
+
 log = logging.getLogger(__name__)
 
 #-----------------------------------------------------------------------------
@@ -321,10 +326,19 @@ class LayoutDOM(Pane):
     @error(MIN_PREFERRED_MAX_HEIGHT)
     def _check_min_preferred_max_height(self):
         min_height = self.min_height if self.min_height is not None else 0
-        height     = self.height     if self.height     is not None and (self.sizing_mode == "fixed" or self.height_policy == "fixed") else min_height
-        max_height = self.max_height if self.max_height is not None else height
 
-        if not (min_height <= height <= max_height):
+        # Inline both height and max_height calculation for less repeated lookups
+        height_val = self.height
+        height_set = height_val is not None and (
+            self.sizing_mode == "fixed" or self.height_policy == "fixed"
+        )
+        height = height_val if height_set else min_height
+
+        max_height_val = self.max_height
+        max_height = max_height_val if max_height_val is not None else height
+
+        # Combined check to minimize if/else and improve branch prediction
+        if min_height > height or height > max_height:
             return str(self)
 
     def _sphinx_height_hint(self) -> int|None:
