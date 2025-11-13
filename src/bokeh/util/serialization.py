@@ -84,7 +84,7 @@ BINARY_ARRAY_TYPES = {
 NP_EPOCH = np.datetime64(0, 'ms')
 NP_MS_DELTA = np.timedelta64(1, 'ms')
 
-DT_EPOCH = dt.datetime.fromtimestamp(0, tz=dt.timezone.utc)
+DT_EPOCH = dt.datetime(1970, 1, 1, tzinfo=dt.timezone.utc)
 
 __doc__ = format_docstring(__doc__, binary_array_types="\n".join(f"* ``np.{x}``" for x in BINARY_ARRAY_TYPES))
 
@@ -135,7 +135,8 @@ def is_timedelta_type(obj: Any) -> TypeGuard[dt.timedelta | np.timedelta64]:
     return isinstance(obj, (dt.timedelta, np.timedelta64))
 
 def convert_date_to_datetime(obj: dt.date) -> float:
-    ''' Convert a date object to a datetime
+    """ Convert a date object to a datetime
+
 
     Args:
         obj (date) : the object to convert
@@ -143,8 +144,17 @@ def convert_date_to_datetime(obj: dt.date) -> float:
     Returns:
         datetime
 
-    '''
-    return (dt.datetime(*obj.timetuple()[:6], tzinfo=dt.timezone.utc) - DT_EPOCH).total_seconds() * 1000
+    """
+    # Fast path if obj is already a datetime *with* tzinfo UTC
+    if isinstance(obj, dt.datetime):
+        if obj.tzinfo is None:
+            obj = obj.replace(tzinfo=dt.timezone.utc)
+        else:
+            obj = obj.astimezone(dt.timezone.utc)
+        return (obj - DT_EPOCH).total_seconds() * 1000
+    # obj is a date (not datetime)
+    obj_dt = dt.datetime(obj.year, obj.month, obj.day, tzinfo=dt.timezone.utc)
+    return (obj_dt - DT_EPOCH).total_seconds() * 1000
 
 def convert_timedelta_type(obj: dt.timedelta | np.timedelta64) -> float:
     ''' Convert any recognized timedelta value to floating point absolute
