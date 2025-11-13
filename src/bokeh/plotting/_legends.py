@@ -10,7 +10,10 @@
 #-----------------------------------------------------------------------------
 from __future__ import annotations
 
+from bokeh.util.strings import nice_join
+
 import logging # isort:skip
+
 log = logging.getLogger(__name__)
 
 #-----------------------------------------------------------------------------
@@ -52,9 +55,14 @@ LEGEND_ARGS = ['legend', 'legend_label', 'legend_field', 'legend_group']
 #-----------------------------------------------------------------------------
 
 def pop_legend_kwarg(kwargs: dict[str, Any]) -> tuple[Any, str]:
-    result = {attr: kwargs.pop(attr) for attr in LEGEND_ARGS if attr in kwargs}
-    if len(result) > 1:
-        from ..util.strings import nice_join
+    num_legend_args = 0
+    result = {}
+    for attr in LEGEND_ARGS:
+        if attr in kwargs:
+            result[attr] = kwargs.pop(attr)
+            num_legend_args += 1
+
+    if num_legend_args > 1:
 
         raise ValueError(f"Only one of {nice_join(LEGEND_ARGS)} may be provided, got: {nice_join(result.keys())}")
     legend_name = kwargs.pop("legend_name", None)

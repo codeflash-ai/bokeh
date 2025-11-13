@@ -61,7 +61,7 @@ def indent(text: str, n: int = 2, ch: str = " ") -> str:
 
 
 def nice_join(seq: Iterable[Any], *, sep: str = ", ", conjunction: str | None = "or") -> str:
-    ''' Join together sequences of strings into English-friendly phrases using
+    """ Join together sequences of strings into English-friendly phrases using
     the conjunction ``or`` when appropriate.
 
     Args:
@@ -77,13 +77,20 @@ def nice_join(seq: Iterable[Any], *, sep: str = ", ", conjunction: str | None = 
         >>> nice_join(["a", "b", "c"])
         'a, b or c'
 
-    '''
-    seq = [str(x) for x in seq]
-
-    if len(seq) <= 1 or conjunction is None:
-        return sep.join(seq)
+    """
+    # Use map(str, ...) for better performance on string conversion
+    # Avoid building the list unless more than one element or conjunction is not None
+    if hasattr(seq, '__len__'):
+        n = len(seq)
+        str_seq = list(map(str, seq))
     else:
-        return f"{sep.join(seq[:-1])} {conjunction} {seq[-1]}"
+        str_seq = list(map(str, seq))
+        n = len(str_seq)
+
+    if n <= 1 or conjunction is None:
+        return sep.join(str_seq)
+    else:
+        return f"{sep.join(str_seq[:-1])} {conjunction} {str_seq[-1]}"
 
 
 def snakify(name: str, sep: str = "_") -> str:
