@@ -46,6 +46,14 @@ if TYPE_CHECKING:
     from ..core.types import ID
     from ..document.document import DocJson
 
+_dollars = r"\$\$.*?\$\$"
+
+_braces  = r"\\\[.*?\\\]"
+
+_parens  = r"\\\(.*?\\\)"
+
+_pat = re.compile(f"^({_dollars}|{_braces}|{_parens})$", flags=re.S)
+
 #-----------------------------------------------------------------------------
 # Globals and constants
 #-----------------------------------------------------------------------------
@@ -351,20 +359,16 @@ def submodel_has_python_callbacks(models: Sequence[Model | Document]) -> bool:
     return has_python_callback
 
 def is_tex_string(text: str) -> bool:
-    ''' Whether a string begins and ends with MathJax default delimiters
+    """ Whether a string begins and ends with MathJax default delimiters
+
 
     Args:
         text (str): String to check
 
     Returns:
         bool: True if string begins and ends with delimiters, False if not
-    '''
-    dollars = r"^\$\$.*?\$\$$"
-    braces  = r"^\\\[.*?\\\]$"
-    parens  = r"^\\\(.*?\\\)$"
-
-    pat = re.compile(f"{dollars}|{braces}|{parens}", flags=re.S)
-    return pat.match(text) is not None
+    """
+    return _pat.match(text) is not None
 
 def contains_tex_string(text: str) -> bool:
     ''' Whether a string contains any pair of MathJax default delimiters
