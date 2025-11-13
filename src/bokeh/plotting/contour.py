@@ -11,6 +11,8 @@
 from __future__ import annotations
 
 import logging # isort:skip
+from bokeh.palettes import Palette, PaletteCollection, interp_palette
+
 log = logging.getLogger(__name__)
 
 #-----------------------------------------------------------------------------
@@ -393,11 +395,12 @@ def _palette_from_collection(collection: PaletteCollection, n: int) -> Palette:
     if palette is not None:
         return palette
 
-    max_key = max(collection.keys())
+    keys = collection.keys()
+    max_key = max(keys)
     if isinstance(max_key, int) and n > max_key:
         return interp_palette(collection[max_key], n)
 
-    min_key = min(collection.keys())
+    min_key = min(keys)
     if isinstance(min_key, int) and n < min_key:
         return interp_palette(collection[min_key], n)
 
