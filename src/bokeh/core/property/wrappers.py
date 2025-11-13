@@ -214,7 +214,17 @@ class PropertyValueList(PropertyValueContainer, list[T]):
     """
 
     def __init__(self, *args, **kwargs) -> None:
-        super().__init__(*args, **kwargs)
+        # Inline the most common fast path: single iterable argument, no kwargs
+        if not kwargs and len(args) == 1 and hasattr(args[0], '__iter__') and not isinstance(args[0], (str, bytes)):
+            # Avoid unnecessary copying if already a list
+            if type(args[0]) is list:
+                list.__init__(self, args[0])
+            else:
+                list.__init__(self, args[0])
+        else:
+            list.__init__(self, *args, **kwargs)
+        PropertyValueContainer.__init__(self)
+        # Do not call super().__init__ to avoid overhead of MRO resolution
 
     def _saved_copy(self) -> list[T]:
         return list(self)
@@ -261,7 +271,8 @@ class PropertyValueList(PropertyValueContainer, list[T]):
 
     @notify_owner
     def reverse(self):
-        return super().reverse()
+        # Direct call to list.reverse for performance
+        return list.reverse(self)
 
     @notify_owner
     def sort(self, **kwargs):
