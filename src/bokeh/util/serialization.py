@@ -135,7 +135,8 @@ def is_timedelta_type(obj: Any) -> TypeGuard[dt.timedelta | np.timedelta64]:
     return isinstance(obj, (dt.timedelta, np.timedelta64))
 
 def convert_date_to_datetime(obj: dt.date) -> float:
-    ''' Convert a date object to a datetime
+    """ Convert a date object to a datetime
+
 
     Args:
         obj (date) : the object to convert
@@ -143,8 +144,10 @@ def convert_date_to_datetime(obj: dt.date) -> float:
     Returns:
         datetime
 
-    '''
-    return (dt.datetime(*obj.timetuple()[:6], tzinfo=dt.timezone.utc) - DT_EPOCH).total_seconds() * 1000
+    """
+    # Directly use the date's year, month, and day values, avoiding timetuple()
+    # this is both faster and avoids unnecessary tuple construction.
+    return (dt.datetime(obj.year, obj.month, obj.day, tzinfo=dt.timezone.utc) - DT_EPOCH).total_seconds() * 1000
 
 def convert_timedelta_type(obj: dt.timedelta | np.timedelta64) -> float:
     ''' Convert any recognized timedelta value to floating point absolute
