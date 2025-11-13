@@ -33,6 +33,9 @@ always be active regardless of what other tools are currently active.
 from __future__ import annotations
 
 import logging # isort:skip
+from bokeh.core.has_props import abstract
+from bokeh.model import Model
+
 log = logging.getLogger(__name__)
 
 #-----------------------------------------------------------------------------
@@ -226,10 +229,22 @@ class Tool(Model):
         if constructor is not None:
             return constructor()
         else:
-            known_names = cls._known_aliases.keys()
-            matches, text = difflib.get_close_matches(name.lower(), known_names), "similar"
+            # Cache known_names and their lower-cased variant per subclass for performance
+            if not hasattr(cls, "_known_names_tuple"):
+                cls._known_names_tuple = tuple(cls._known_aliases.keys())
+                cls._known_names_lower = tuple(k.lower() for k in cls._known_names_tuple)
+            known_names = cls._known_names_tuple
+            known_names_lower = cls._known_names_lower
+
+            name_lc = name.lower()
+            matches = difflib.get_close_matches(name_lc, known_names_lower)
+            text = "similar"
             if not matches:
                 matches, text = known_names, "possible"
+            else:
+                # Map back to the original casing (preserves behavior)
+                index_map = {v: i for i, v in enumerate(known_names_lower)}
+                matches = [known_names[index_map[m]] for m in matches]
 
             from ..util.strings import nice_join
 
