@@ -14,6 +14,8 @@
 from __future__ import annotations
 
 import logging # isort:skip
+from bokeh.core.property.bases import Property
+
 log = logging.getLogger(__name__)
 
 #-----------------------------------------------------------------------------
@@ -54,7 +56,6 @@ class Date(Property[str | datetime.date]):
 
     """
     def transform(self, value: Any) -> Any:
-        value = super().transform(value)
 
         if isinstance(value, datetime.date):
             value = value.isoformat()
