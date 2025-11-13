@@ -33,6 +33,8 @@ always be active regardless of what other tools are currently active.
 from __future__ import annotations
 
 import logging # isort:skip
+from bokeh.core.enums import KeyModifierType
+
 log = logging.getLogger(__name__)
 
 #-----------------------------------------------------------------------------
@@ -165,9 +167,10 @@ Modifiers = lambda **kwargs: Struct(shift=Optional(Bool), ctrl=Optional(Bool), a
 #-----------------------------------------------------------------------------
 
 def _parse_modifiers(value: str) -> dict[KeyModifierType, bool]:
-    keys = [key.strip() for key in value.split("+")]
+    keys = value.split("+")
     modifiers: dict[KeyModifierType, bool] = {}
     for key in keys:
+        key = key.strip()
         match key:
             case "alt":   modifiers["alt"]   = True
             case "ctrl":  modifiers["ctrl"]  = True
