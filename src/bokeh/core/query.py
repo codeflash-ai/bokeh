@@ -15,6 +15,8 @@ models for instances that match specified criteria.
 from __future__ import annotations
 
 import logging # isort:skip
+from bokeh.model import Model
+
 log = logging.getLogger(__name__)
 
 #-----------------------------------------------------------------------------
@@ -191,7 +193,12 @@ def match(obj: Model, selector: SelectorType) -> bool:
                     if val not in obj.tags: return False
                 else:
                     try:
-                        if not set(val) & set(obj.tags): return False
+                        # Use iterator approach instead of set construction for better performance
+                        for v in val:
+                            if v in obj.tags:
+                                break
+                        else:
+                            return False
                     except TypeError:
                         if val not in obj.tags: return False
 
