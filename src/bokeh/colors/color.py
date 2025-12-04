@@ -415,7 +415,7 @@ class HSL(Color):
         return HSL(self.h, self.s, self.l, self.a)
 
     def darken(self, amount: float) -> HSL:
-        ''' Darken (reduce the luminance) of this color.
+        """ Darken (reduce the luminance) of this color.
 
         Args:
             amount (float) :
@@ -424,8 +424,11 @@ class HSL(Color):
         Returns:
             :class:`~bokeh.colors.HSL`
 
-        '''
-        return self.lighten(-amount)
+        """
+        # Avoid calling self.lighten, which creates an unnecessary HSL instance before copying
+        hsl = self.copy()
+        hsl.l = self.clamp(hsl.l - amount, 1)
+        return self.from_hsl(hsl)
 
     @classmethod
     def from_hsl(cls, value: HSL) -> HSL:
@@ -488,7 +491,7 @@ class HSL(Color):
         return RGB(round(r*255), round(g*255), round(b*255), self.a)
 
     def lighten(self, amount: float) -> HSL:
-        ''' Lighten (increase the luminance) of this color.
+        """ Lighten (increase the luminance) of this color.
 
         Args:
             amount (float) :
@@ -497,7 +500,7 @@ class HSL(Color):
         Returns:
             :class:`~bokeh.colors.HSL`
 
-        '''
+        """
         hsl = self.copy()
         hsl.l = self.clamp(hsl.l + amount, 1)
         return self.from_hsl(hsl)
