@@ -119,7 +119,7 @@ def create_chromium_webdriver(extra_options: list[str] | None = None, scale_fact
 
 
 def scale_factor_less_than_web_driver_device_pixel_ratio(scale_factor: float, web_driver: WebDriver) -> bool:
-    device_pixel_ratio = get_web_driver_device_pixel_ratio(web_driver)
+    device_pixel_ratio: float = web_driver.execute_script("return window.devicePixelRatio")
     return device_pixel_ratio >= scale_factor
 
 
