@@ -14,6 +14,8 @@
 from __future__ import annotations
 
 import logging # isort:skip
+import pandas as pd
+
 log = logging.getLogger(__name__)
 
 #-----------------------------------------------------------------------------
@@ -28,6 +30,8 @@ from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from types import ModuleType
+
+PANDAS_TYPES = (pd.Series, pd.Index)
 
 #-----------------------------------------------------------------------------
 # Globals and constants
