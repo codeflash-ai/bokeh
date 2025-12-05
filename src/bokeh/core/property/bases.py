@@ -20,6 +20,10 @@
 from __future__ import annotations
 
 import logging # isort:skip
+from bokeh.core.property.descriptor_factory import PropertyDescriptorFactory
+from bokeh.core.property.singletons import Intrinsic, Undefined
+from bokeh.util.dependencies import uses_pandas
+
 log = logging.getLogger(__name__)
 
 #-----------------------------------------------------------------------------
@@ -259,9 +263,21 @@ class Property(PropertyDescriptorFactory[T]):
             # this handles the special but common case where there is a dict with array
             # or series as values (e.g. the .data property of a ColumnDataSource)
             if isinstance(new, dict) and isinstance(old, dict):
-                if set(new.keys()) != set(old.keys()):
+                new_keys = new.keys()
+                old_keys = old.keys()
+                if new_keys != old_keys:
                     return False
-                return all(self.matches(new[k], old[k]) for k in new)
+                matches = self.matches
+                for k in new_keys:
+                    if not matches(new[k], old[k]):
+                        return False
+                return True
+
+            # FYI Numpy can erroneously raise a warning about elementwise
+            # comparison here when a timedelta is compared to another scalar.
+            # https://github.com/numpy/numpy/issues/10095
+            # bool() is to handle when new and old cannot be compared
+            # and raises TypeError, an example of this is pd.NA
 
             # FYI Numpy can erroneously raise a warning about elementwise
             # comparison here when a timedelta is compared to another scalar.
