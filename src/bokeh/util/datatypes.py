@@ -48,10 +48,10 @@ class MultiValuedDict(Generic[K, V]):
     _dict: dict[K, V | set[V]]
 
     def __init__(self) -> None:
-        '''
+        """
 
-        '''
-        self._dict = {}
+        """
+        self._dict: dict[K, V | set[V]] = {}
 
     def add_value(self, key: K, value: V) -> None:
         '''
@@ -87,14 +87,18 @@ class MultiValuedDict(Generic[K, V]):
             return [existing]
 
     def get_one(self, k: K, duplicate_error: str) -> V | None:
-        '''
+        """
 
-        '''
+        """
         existing = self._dict.get(k)
         if isinstance(existing, set):
+            # O(1) check for singleton set without creating iterator objects
             existing = cast(set[V], existing)
+            if not existing:
+                return None
+            (value,) = existing
             if len(existing) == 1:
-                return next(iter(existing))
+                return value
             else:
                 raise ValueError(f"{duplicate_error}: {existing!r}")
         else:
