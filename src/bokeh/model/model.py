@@ -14,6 +14,11 @@ a Bokeh |Document|.
 from __future__ import annotations
 
 import logging # isort:skip
+from bokeh.themes import default as default_theme
+from bokeh.core.has_props import HasProps, abstract
+from bokeh.model.util import HasDocumentRef, collect_models
+from bokeh.util.callback_manager import EventCallbackManager, PropertyCallbackManager
+
 log = logging.getLogger(__name__)
 
 #-----------------------------------------------------------------------------
@@ -493,7 +498,7 @@ class Model(HasProps, HasDocumentRef, PropertyCallbackManager, EventCallbackMana
         ''' Returns all ``Models`` that this object has references to.
 
         '''
-        return set(collect_models(self))
+        return collect_models(self)
 
     def select(self, selector: SelectorType) -> Iterable[Model]:
         ''' Query this object and all of its references for objects that
