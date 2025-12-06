@@ -83,6 +83,7 @@ class CustomDimensional(Dimensional):
     # explicit __init__ to support Init signatures
     def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
+        self._basis_keys = set(self.basis.keys()) if hasattr(self, "basis") else set()
 
     basis = Required(Dict(String, Either(Tuple(Float, String), Tuple(Float, String, String))), help="""
     The basis defining the units of measurement.
@@ -101,7 +102,7 @@ class CustomDimensional(Dimensional):
     """)
 
     def is_known(self, unit: str) -> bool:
-        return unit in self.basis
+        return unit in self._basis_keys
 
 class Metric(Dimensional):
     """ Model for defining metric units of measurement.
