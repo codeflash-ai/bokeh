@@ -14,6 +14,8 @@
 from __future__ import annotations
 
 import logging # isort:skip
+from bokeh.settings import settings
+
 log = logging.getLogger(__name__)
 
 #-----------------------------------------------------------------------------
@@ -41,6 +43,8 @@ from typing import Any, Callable, Sequence
 from ..core.has_props import HasProps
 from ..settings import settings
 from .strings import snakify
+
+_version_re = re.compile(r"^v(\d+)\.(\d+)\.(\d+).*$")
 
 #-----------------------------------------------------------------------------
 # Globals and constants
@@ -388,28 +392,39 @@ def _detect_nodejs() -> Path:
     nodejs_path = settings.nodejs_path()
     nodejs_paths = [nodejs_path] if nodejs_path is not None else ["nodejs", "node"]
 
+    # Avoid repeated lookups
+    min_version = nodejs_min_version
+
     for nodejs_path in nodejs_paths:
         try:
             proc = Popen([nodejs_path, "--version"], stdout=PIPE, stderr=PIPE)
-            (stdout, _) = proc.communicate()
+            stdout, _ = proc.communicate()
         except OSError:
             continue
 
         if proc.returncode != 0:
             continue
 
-        match = re.match(r"^v(\d+)\.(\d+)\.(\d+).*$", stdout.decode("utf-8"))
+        # We now use the pre-compiled regex and avoid unnecessary decoding if possible
+        # Using bytes for regex can be slightly faster as we avoid decode step if regexp is bytes, but since our pattern is str, we must decode once.
+        # Therefore, just do decode once, but use compiled regex
+        match = _version_re.match(stdout.decode("utf-8"))
 
         if match is not None:
-            version = tuple(int(v) for v in match.groups())
+            # Unpack and avoid generator for tuple creation, slightly faster
+            major, minor, patch = map(int, match.groups())
+            version = (major, minor, patch)
 
-            if version >= nodejs_min_version:
+            if version >= min_version:
                 return Path(nodejs_path)
 
     # if we've reached here, no valid version was found
-    version_repr = ".".join(str(x) for x in nodejs_min_version)
-    raise RuntimeError(f'node.js v{version_repr} or higher is needed to allow compilation of custom models ' +
-                       '("conda install nodejs" or follow https://nodejs.org/en/download/)')
+    # Optimization: f-string formatting instead of joining in generator
+    version_repr = f"{min_version[0]}.{min_version[1]}.{min_version[2]}"
+    raise RuntimeError(
+        f'node.js v{version_repr} or higher is needed to allow compilation of custom models '
+        '("conda install nodejs" or follow https://nodejs.org/en/download/)'
+    )
 
 _nodejs: Path | None = None
 _npmjs: Path | None = None
