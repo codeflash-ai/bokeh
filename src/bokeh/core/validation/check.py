@@ -14,6 +14,8 @@
 from __future__ import annotations
 
 import logging # isort:skip
+from bokeh.core.validation.issue import Warning
+
 log = logging.getLogger(__name__)
 
 #-----------------------------------------------------------------------------
@@ -117,6 +119,8 @@ def is_silenced(warning: Warning) -> bool:
         bool
 
     '''
+    if not __silencers__:
+        return False
     return warning in __silencers__
 
 @contextlib.contextmanager
