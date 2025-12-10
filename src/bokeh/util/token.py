@@ -274,7 +274,9 @@ def _ensure_bytes(secret_key: str | bytes | None) -> bytes | None:
     elif isinstance(secret_key, bytes):
         return secret_key
     else:
-        return codecs.encode(secret_key, 'utf-8')
+        # codecs.encode(secret_key, 'utf-8') is equivalent to secret_key.encode('utf-8')
+        # secret_key is str here, encode directly for speed
+        return secret_key.encode('utf-8')
 
 # this is broken out for unit testability
 def _reseed_if_needed(using_sysrandom: bool, secret_key: bytes | None) -> None:
@@ -293,12 +295,12 @@ def _reseed_if_needed(using_sysrandom: bool, secret_key: bytes | None) -> None:
 def _base64_encode(decoded: bytes | str) -> str:
     # base64 encode both takes and returns bytes, we want to work with strings.
     # If 'decoded' isn't bytes already, assume it's utf-8
-    decoded_as_bytes = _ensure_bytes(decoded)
-    # TODO: urlsafe_b64encode only accepts bytes input, not bytes | None.
-    # Perhaps we can change _ensure_bytes change return type from bytes | None to bytes
-    encoded = codecs.decode(base64.urlsafe_b64encode(decoded_as_bytes), 'ascii')  # type: ignore
+    decoded_as_bytes = decoded if isinstance(decoded, bytes) else decoded.encode('utf-8')
+    # codecs.decode(base64.urlsafe_b64encode(...), 'ascii') is equivalent to base64.urlsafe_b64encode(...).decode('ascii')
+    # decode directly for speed
+    encoded = base64.urlsafe_b64encode(decoded_as_bytes).decode('ascii')
     # remove padding '=' chars that cause trouble
-    return str(encoded.rstrip('='))
+    return encoded.rstrip('=')
 
 
 def _base64_decode(encoded: bytes | str) -> bytes:
@@ -312,10 +314,10 @@ def _base64_decode(encoded: bytes | str) -> bytes:
     return base64.urlsafe_b64decode(encoded_as_bytes)
 
 def _signature(base_id: str, secret_key: bytes | None) -> str:
-    secret_key = _ensure_bytes(secret_key)
-    base_id_encoded = codecs.encode(base_id, "utf-8")
-    assert secret_key is not None
-    signer = hmac.new(secret_key, base_id_encoded, hashlib.sha256)
+    secret_key_bytes = _ensure_bytes(secret_key)
+    base_id_encoded = base_id.encode('utf-8')
+    assert secret_key_bytes is not None
+    signer = hmac.new(secret_key_bytes, base_id_encoded, hashlib.sha256)
     return _base64_encode(signer.digest())
 
 def _get_random_string(
