@@ -49,6 +49,49 @@ from ..model import Model
 from ..util.strings import format_docstring
 from .tickers import Ticker
 
+_base_kwargs = {
+    "nanoseconds": "%NSns",
+    "microseconds": "%USus",
+    "milliseconds": "%MSms",
+    "seconds": "%H:%M:%S",
+    "minsec": "%H:%M:%S",
+    "minutes": "%H:%M",
+    "hourmin": "%H:%M",
+    "hours": "%H:%M",
+    "days": "%d days",
+    "strip_leading_zeros": ["nanoseconds", "microseconds", "milliseconds"],  # list is reused, but only for reads
+    "context_which": "all",
+}
+
+_ctx2_kwargs = {
+    "nanoseconds": "%d days",
+    "microseconds": "%d days",
+    "milliseconds": "%d days",
+    "seconds": "",
+    "minsec": "",
+    "minutes": "",
+    "hourmin": "",
+    "hours": "",
+    "days": "",
+    "hide_repeats": True,
+    "context": None,
+}
+
+_ctx1_kwargs = {
+    "nanoseconds": "%H:%M:%S.%MS%US",
+    "microseconds": "%H:%M:%S.%MS",
+    "milliseconds": "%H:%M:%S",
+    "seconds": "%d days",
+    "minsec": "%d days",
+    "minutes": "%d days",
+    "hourmin": "%d days",
+    "hours": "%d days",
+    "days": "",
+    "hide_repeats": True,
+    "context_which": "all",
+    # "context" will be filled below; can't reference _ctx2_kwargs until definition completed
+}
+
 #-----------------------------------------------------------------------------
 # Globals and constants
 #-----------------------------------------------------------------------------
@@ -837,45 +880,15 @@ def CONTEXTUAL_DATETIME_FORMATTER() -> DatetimeTickFormatter:
     )
 
 def CONTEXTUAL_TIMEDELTA_FORMATTER() -> TimedeltaTickFormatter:
-    return TimedeltaTickFormatter(
-        nanoseconds="%NSns",
-        microseconds="%USus",
-        milliseconds="%MSms",
-        seconds="%H:%M:%S",
-        minsec="%H:%M:%S",
-        minutes="%H:%M",
-        hourmin="%H:%M",
-        hours="%H:%M",
-        days="%d days",
-        strip_leading_zeros=["nanoseconds", "microseconds", "milliseconds"],
-        context_which="all",
-        context=TimedeltaTickFormatter(
-            nanoseconds="%H:%M:%S.%MS%US",
-            microseconds="%H:%M:%S.%MS",
-            milliseconds="%H:%M:%S",
-            seconds="%d days",
-            minsec="%d days",
-            minutes="%d days",
-            hourmin="%d days",
-            hours="%d days",
-            days="",
-            hide_repeats=True,
-            context_which="all",
-            context=TimedeltaTickFormatter(
-                nanoseconds="%d days",
-                microseconds="%d days",
-                milliseconds="%d days",
-                seconds="",
-                minsec="",
-                minutes="",
-                hourmin="",
-                hours="",
-                days="",
-                hide_repeats=True,
-                context=None,
-            ),
-        ),
-    )
+    # Use the static dicts and avoid list/dict allocations each call
+    # TimedeltaTickFormatter is assumed to be immutable after construction
+    ctx2 = TimedeltaTickFormatter(**_ctx2_kwargs)
+    ctx1_kw = _ctx1_kwargs.copy()
+    ctx1_kw["context"] = ctx2
+    ctx1 = TimedeltaTickFormatter(**ctx1_kw)
+    base_kw = _base_kwargs.copy()
+    base_kw["context"] = ctx1
+    return TimedeltaTickFormatter(**base_kw)
 #-----------------------------------------------------------------------------
 # Dev API
 #-----------------------------------------------------------------------------
