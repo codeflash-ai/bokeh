@@ -431,6 +431,8 @@ from .colors.util import RGB, NamedColor
 if TYPE_CHECKING:
     import numpy.typing as npt
 
+_linspace_cache = {}
+
 #-----------------------------------------------------------------------------
 # Globals and constants
 #-----------------------------------------------------------------------------
@@ -1524,9 +1526,18 @@ def linear_palette(palette: Palette, n: int) -> Palette:
         ValueError if n > len(palette)
 
     """
-    if n > len(palette):
-        raise ValueError(f"Requested {n} colors, function can only return colors up to the base palette's length ({len(palette)})")
-    return tuple( palette[math.floor(i)] for i in np.linspace(0, len(palette)-1, num=n) )
+    length = len(palette)
+    if n > length:
+        raise ValueError(f"Requested {n} colors, function can only return colors up to the base palette's length ({length})")
+    # Use cached linspace results for faster index calculation
+    indices = _get_linspace_indices(length, n)
+    # Optimization: Local variable access faster than repeated global attribute lookup for math.floor and palette
+    floor = math.floor
+    # Copy palette lookup to local variable to reduce global lookup overhead inside genexpr
+    _palette = palette
+    # Use generator expression and tuple constructor for memory efficiency, as in original,
+    # but lookup floor and palette locally so the loop is faster.
+    return tuple(_palette[floor(i)] for i in indices)
 
 def diverging_palette(palette1: Palette, palette2: Palette, n: int, midpoint: float = 0.5) -> Palette:
     """ Generate a new palette by combining exactly two input palettes.
@@ -1931,6 +1942,14 @@ def to_rgba_array(palette: Palette) -> npt.NDArray[np.uint8]:
         rgba_array[i] = (rgba.r, rgba.g, rgba.b, rgba.a*255)
 
     return rgba_array
+
+def _get_linspace_indices(length: int, n: int):
+    """Return evenly spaced indices for a palette of given length and n colors, using caching for repeated n."""
+    key = (length, n)
+    if key not in _linspace_cache:
+        # Always use dtype float for math.floor, just like original. Cache result as tuple for efficiency.
+        _linspace_cache[key] = tuple(np.linspace(0, length-1, num=n))
+    return _linspace_cache[key]
 
 #-----------------------------------------------------------------------------
 # Private API
