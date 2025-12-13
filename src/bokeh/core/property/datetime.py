@@ -14,6 +14,10 @@
 from __future__ import annotations
 
 import logging # isort:skip
+from bokeh.core.property.bases import Init, Property
+from bokeh.core.property.singletons import Undefined
+from bokeh.util.serialization import convert_date_to_datetime
+
 log = logging.getLogger(__name__)
 
 #-----------------------------------------------------------------------------
@@ -89,12 +93,23 @@ class Datetime(Property[str | datetime.date | datetime.datetime]):
     def transform(self, value: Any) -> Any:
         value = super().transform(value)
 
+
+        # Fast path: already a datetime.datetime
+        if isinstance(value, datetime.datetime):
+            # UTC-ize if needed (handled by convert_date_to_datetime)
+            return convert_date_to_datetime(value)
+
+        # String to datetime conversion
         if isinstance(value, str):
             value = datetime.datetime.fromisoformat(value)
 
         # Handled by serialization in protocol.py for now, except for Date
+            return convert_date_to_datetime(value)
+
+        # datetime.date but not datetime.datetime
         if isinstance(value, datetime.date):
-            value = convert_date_to_datetime(value)
+            return convert_date_to_datetime(value)
+
 
         return value
 
