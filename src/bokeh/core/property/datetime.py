@@ -14,6 +14,9 @@
 from __future__ import annotations
 
 import logging # isort:skip
+from bokeh.core.property.bases import Init, Property
+from bokeh.core.property.singletons import Undefined
+
 log = logging.getLogger(__name__)
 
 #-----------------------------------------------------------------------------
@@ -133,14 +136,14 @@ class Time(Property[str | datetime.time]):
         super().__init__(default=default, help=help)
 
     def validate(self, value: Any, detail: bool = True) -> None:
-        super().validate(value, detail)
 
         if isinstance(value, datetime.time):
             return
 
         if isinstance(value, str):
+            fromisoformat = datetime.time.fromisoformat
             try:
-                datetime.time.fromisoformat(value)
+                fromisoformat(value)
                 return
             except ValueError:
                 pass
