@@ -14,6 +14,9 @@
 from __future__ import annotations
 
 import logging # isort:skip
+from bokeh.core.property.bases import ContainerProperty, Init, Property, TypeOrInst
+from bokeh.core.property.singletons import Undefined
+
 log = logging.getLogger(__name__)
 
 #-----------------------------------------------------------------------------
@@ -116,13 +119,26 @@ class Seq(ContainerProperty[T]):
 
     @classmethod
     def _is_seq(cls, value: Any) -> bool:
-        return ((isinstance(value, Sequence) or cls._is_seq_like(value)) and not isinstance(value, str))
+        # Avoid or-chain if string, which is the only built-in that should be denied.
+        # Inline fast path for most common Sequence case.
+        if isinstance(value, str):
+            return False
+        if isinstance(value, Sequence):
+            return True
+        return cls._is_seq_like(value)
 
     @classmethod
     def _is_seq_like(cls, value: Any) -> bool:
-        return (isinstance(value, (Container, Sized, Iterable))
-                and hasattr(value, "__getitem__") # NOTE: this is what makes it disallow set type
-                and not isinstance(value, Mapping))
+        # Fast path: Sets are Container, Sized, Iterable, but do not have __getitem__
+        # Avoid unnecessary isinstance if Mapping, Mapping is also Container etc.
+        # Put hasattr check first, as it's the fastest and rules out set/most undesired types
+        # Checking Mapping afterwards avoids needlessly building MRO for Mapping when __getitem__ isn't even present
+        if not hasattr(value, "__getitem__"):
+            return False
+        if isinstance(value, Mapping):
+            return False
+        # Only check Container, Sized, Iterable at the end as hasattr("__getitem__") rules out most non-sequences
+        return isinstance(value, (Container, Sized, Iterable))
 
 class List(Seq[T]):
     """ Accept Python list values.
