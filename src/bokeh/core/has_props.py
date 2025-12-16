@@ -161,12 +161,25 @@ class _ModelResolver:
         return dict(self._known_models)
 
     def clear_extensions(self) -> None:
-        def is_extension(obj: type[HasProps]) -> bool:
-            return getattr(obj, "__implementation__", None) is not None or \
-                   getattr(obj, "__javascript__", None) is not None or \
-                   getattr(obj, "__css__", None) is not None
+        # Inline is_extension logic for improved runtime efficiency,
+        # Avoid function call overhead per dict item during filtering
 
-        self._known_models = {key: val for key, val in self._known_models.items() if not is_extension(val)}
+        known_models = self._known_models
+        # List comprehension to collect keys to avoid dict allocation until necessary
+        to_keep = [
+            key for key, val in known_models.items()
+            if not (
+                getattr(val, "__implementation__", None) is not None or
+                getattr(val, "__javascript__", None) is not None or
+                getattr(val, "__css__", None) is not None
+            )
+        ]
+
+        # Rebuild _known_models by only keeping filtered items
+        if len(to_keep) < len(known_models):
+            # Only rebuild if any items would be removed, to save unnecessary copying
+            self._known_models = {key: known_models[key] for key in to_keep}
+        # Otherwise no extension found, dict stays unchanged
 
 _default_resolver = _ModelResolver()
 
