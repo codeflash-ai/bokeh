@@ -348,7 +348,9 @@ class PropertyValueDict(PropertyValueContainer, dict[str, T_Val]):
 
     """
     def __init__(self, *args, **kwargs) -> None:
-        super().__init__(*args, **kwargs)
+        # Avoid unnecessary double initialization by calling __init__ on PropertyValueContainer only
+        PropertyValueContainer.__init__(self)
+        dict.__init__(self, *args, **kwargs)
 
     def _saved_copy(self):
         return dict(self)
@@ -365,7 +367,8 @@ class PropertyValueDict(PropertyValueContainer, dict[str, T_Val]):
 
     @notify_owner
     def clear(self):
-        return super().clear()
+        # Use dict.clear directly to avoid potential overhead of super()
+        return dict.clear(self)
 
     @notify_owner
     def pop(self, *args):
