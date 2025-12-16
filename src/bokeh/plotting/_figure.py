@@ -14,6 +14,11 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import logging # isort:skip
+from bokeh.models import ColumnDataSource, GraphRenderer, LayoutProvider, Plot
+from bokeh.plotting._graph import get_graph_kwargs
+from bokeh.plotting._plot import get_range, get_scale, process_axis_and_grid
+from bokeh.plotting._tools import process_active_tools, process_tools_arg
+from bokeh.plotting.glyph_api import GlyphAPI
 
 log = logging.getLogger(__name__)
 
@@ -185,10 +190,15 @@ class figure(Plot, GlyphAPI):
     def __init__(self, *arg, **kw) -> None:
         opts = FigureOptions(kw)
 
+        # Precompute opts properties once
+        opts_props = opts.properties()
         names = self.properties()
+        all_props = names | opts_props
+
+        # Fast mismatch check with one lookup per kw-key
         for name in kw.keys():
-            if name not in names:
-                self._raise_attribute_error_with_matches(name, names | opts.properties())
+            if name not in all_props:
+                self._raise_attribute_error_with_matches(name, all_props)
 
         super().__init__(*arg, **kw)
 
@@ -646,7 +656,7 @@ class figure(Plot, GlyphAPI):
         return self._line_stack(y=stackers, **kw)
 
     def graph(self, node_source: ColumnDataSource, edge_source: ColumnDataSource, layout_provider: LayoutProvider, **kwargs):
-        ''' Creates a network graph using the given node, edge and layout provider.
+        """ Creates a network graph using the given node, edge and layout provider.
 
         Args:
             node_source (:class:`~bokeh.models.sources.ColumnDataSource`) : a user-supplied data source
@@ -664,7 +674,7 @@ class figure(Plot, GlyphAPI):
 
             **kwargs: |line properties| and |fill properties|
 
-        '''
+        """
         kw = get_graph_kwargs(node_source, edge_source, **kwargs)
         graph_renderer = GraphRenderer(layout_provider=layout_provider, **kw)
         self.renderers.append(graph_renderer)
