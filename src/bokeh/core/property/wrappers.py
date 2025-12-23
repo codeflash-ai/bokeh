@@ -217,7 +217,7 @@ class PropertyValueList(PropertyValueContainer, list[T]):
         super().__init__(*args, **kwargs)
 
     def _saved_copy(self) -> list[T]:
-        return list(self)
+        return self.copy()
 
     # delete x[y]
     @notify_owner
