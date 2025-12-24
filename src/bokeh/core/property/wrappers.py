@@ -212,12 +212,11 @@ class PropertyValueList(PropertyValueContainer, list[T]):
         x.sort
 
     """
-
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
 
     def _saved_copy(self) -> list[T]:
-        return list(self)
+        return self[:]
 
     # delete x[y]
     @notify_owner
