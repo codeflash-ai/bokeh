@@ -210,7 +210,7 @@ class Handler:
         ''' Return a path to app-specific static resources, if applicable.
 
         '''
-        if self.failed:
+        if self._failed:
             return None
         else:
             return self._static
