@@ -13,7 +13,10 @@
 #-----------------------------------------------------------------------------
 from __future__ import annotations
 
+import re
+
 import logging # isort:skip
+
 log = logging.getLogger(__name__)
 
 #-----------------------------------------------------------------------------
@@ -33,6 +36,10 @@ from ..core.serialization import AnyRep, Serializable, Serializer
 if TYPE_CHECKING:
     import numpy as np
     from typing_extensions import Self
+
+_RE_HEX_LONG = re.compile(r"#([\da-fA-F]{2}){3,4}\Z")
+
+_RE_HEX_SHORT = re.compile(r"#[\da-fA-F]{3,4}\Z")
 
 #-----------------------------------------------------------------------------
 # Globals and constants
@@ -214,7 +221,7 @@ class RGB(Color):
     a: float
 
     def __init__(self, r: int | np.integer, g: int | np.integer, b: int | np.integer, a: float | np.floating = 1.0) -> None:
-        '''
+        """
 
         Args:
             r (int) :
@@ -229,7 +236,7 @@ class RGB(Color):
             a (float, optional) :
                 An alpha value for this color in [0, 1] (default: 1.0)
 
-        '''
+        """
         self.r = cast(int, r)
         self.g = cast(int, g)
         self.b = cast(int, b)
@@ -260,7 +267,7 @@ class RGB(Color):
 
     @classmethod
     def from_hex_string(cls, hex_string: str) -> RGB:
-        ''' Create an RGB color from a RGB(A) hex string.
+        """ Create an RGB color from a RGB(A) hex string.
 
         Args:
             hex_string (str) :
@@ -270,10 +277,10 @@ class RGB(Color):
         Returns:
             :class:`~bokeh.colors.RGB`
 
-        '''
+        """
         if isinstance(hex_string, str):
             # Hex color as #rrggbbaa or #rrggbb
-            if match(r"#([\da-fA-F]{2}){3,4}\Z", hex_string):
+            if _RE_HEX_LONG.match(hex_string):
                 r = int(hex_string[1:3], 16)
                 g = int(hex_string[3:5], 16)
                 b = int(hex_string[5:7], 16)
@@ -281,7 +288,7 @@ class RGB(Color):
                 return RGB(r, g, b, a)
 
             # Hex color as #rgb or #rgba
-            if match(r"#[\da-fA-F]{3,4}\Z", hex_string):
+            if _RE_HEX_SHORT.match(hex_string):
                 r = int(hex_string[1]*2, 16)
                 g = int(hex_string[2]*2, 16)
                 b = int(hex_string[3]*2, 16)
