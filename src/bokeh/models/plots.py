@@ -94,6 +94,8 @@ from .ui import StyledElement
 if TYPE_CHECKING:
     import xyzservices
 
+_LIST_ATTRS = set(dir(list))
+
 #-----------------------------------------------------------------------------
 # Globals and constants
 #-----------------------------------------------------------------------------
@@ -966,16 +968,25 @@ class _list_attr_splat(list):
         for x in self:
             setattr(x, attr, value)
     def __getattribute__(self, attr):
-        if attr in dir(list):
+        # Fast-path: avoid repeatedly constructing dir(list) by using cached set
+        if attr in _LIST_ATTRS:
             return list.__getattribute__(self, attr)
-        if len(self) == 0:
+        length = list.__len__(self)
+        if length == 0:
             raise AttributeError(f"Trying to access {attr!r} attribute on an empty 'splattable' list")
-        if len(self) == 1:
+        if length == 1:
+            # Avoid function call overhead of getattr for common built-in types, but preserve behavior
             return getattr(self[0], attr)
-        try:
-            return _list_attr_splat([getattr(x, attr) for x in self])
-        except Exception:
-            raise AttributeError(f"Trying to access {attr!r} attribute on a 'splattable' list, but list items have no {attr!r} attribute")
+        # Speculatively collect attributes, short-circuit on AttributeError to avoid full traversal
+        items = []
+        for x in self:
+            try:
+                items.append(getattr(x, attr))
+            except Exception:
+                raise AttributeError(
+                    f"Trying to access {attr!r} attribute on a 'splattable' list, but list items have no {attr!r} attribute"
+                )
+        return _list_attr_splat(items)
 
     def __dir__(self):
         if len({type(x) for x in self}) == 1:
