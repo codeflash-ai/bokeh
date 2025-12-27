@@ -10,7 +10,14 @@
 #-----------------------------------------------------------------------------
 from __future__ import annotations
 
+from bokeh.core.property.dataspec import ColorSpec
+from bokeh.models import ColumnarDataSource, ColumnDataSource, GlyphRenderer
+from bokeh.models.glyph import Glyph
+from bokeh.models.plots import Plot
+from bokeh.plotting._legends import pop_legend_kwarg, update_legend
+
 import logging # isort:skip
+
 log = logging.getLogger(__name__)
 
 #-----------------------------------------------------------------------------
@@ -33,6 +40,8 @@ from ._legends import pop_legend_kwarg, update_legend
 if TYPE_CHECKING:
     from ..models.glyph import Glyph
     from ..models.plots import Plot
+
+_VISUAL_FEATURES = {'line', 'fill', 'hatch', 'text', 'global'}
 
 #-----------------------------------------------------------------------------
 # Globals and constants
@@ -314,8 +323,15 @@ def _split_feature_trait(ft: str) -> tuple[str, str | None]:
 
 def _is_visual(ft: str) -> bool:
     """Whether a feature trait name is visual"""
-    feature, trait = _split_feature_trait(ft)
-    return feature in ('line', 'fill', 'hatch', 'text', 'global') and trait is not None
+    # Inline parsing for faster execution, avoiding extra call
+    idx = ft.find("_")
+    if idx == -1:
+        feature = ft[0]
+        trait = None
+    else:
+        feature = ft[:idx]
+        trait = ft[idx+1:]
+    return feature in _VISUAL_FEATURES and trait is not None
 
 _GLYPH_SOURCE_MSG = """
 
