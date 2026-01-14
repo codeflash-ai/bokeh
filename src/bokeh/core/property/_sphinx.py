@@ -23,6 +23,8 @@ log = logging.getLogger(__name__)
 # Standard library imports
 from typing import Any, Callable, TypeAlias
 
+_property_link_cache: dict[type[Any], str] = {}
+
 #-----------------------------------------------------------------------------
 # Globals and constants
 #-----------------------------------------------------------------------------
@@ -46,9 +48,15 @@ def model_link(fullname: str) -> str:
     return f":class:`~{fullname}`\\ "
 
 def property_link(obj: Any) -> str:
+    obj_class = obj.__class__
+    if obj_class in _property_link_cache:
+        return _property_link_cache[obj_class]
+    
     # (double) escaped space at the end is to appease Sphinx
     # https://www.sphinx-doc.org/en/master/usage/restructuredtext/basics.html#gotchas
-    return f":class:`~bokeh.core.properties.{obj.__class__.__name__}`\\ "
+    result = f":class:`~bokeh.core.properties.{obj_class.__name__}`\\ "
+    _property_link_cache[obj_class] = result
+    return result
 
 Fn: TypeAlias = Callable[[Any], str]
 
