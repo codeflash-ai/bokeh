@@ -13,7 +13,13 @@
 #-----------------------------------------------------------------------------
 from __future__ import annotations
 
+from bokeh.core.templates import AUTOLOAD_REQUEST_TAG
+from bokeh.core.types import ID
+from bokeh.resources import DEFAULT_SERVER_HTTP_URL
+from bokeh.util.serialization import make_globally_unique_css_safe_id
+
 import logging # isort:skip
+
 log = logging.getLogger(__name__)
 
 #-----------------------------------------------------------------------------
@@ -283,7 +289,8 @@ def server_html_page_for_session(session: ServerSession, resources: Resources, t
 #-----------------------------------------------------------------------------
 
 def _clean_url(url: str) -> str:
-    ''' Produce a canonical Bokeh server URL.
+    """ Produce a canonical Bokeh server URL.
+
 
     Args:
         url (str)
@@ -293,7 +300,7 @@ def _clean_url(url: str) -> str:
     Returns:
         str
 
-    '''
+    """
     if url == 'default':
         url = DEFAULT_SERVER_HTTP_URL
 
@@ -303,7 +310,8 @@ def _clean_url(url: str) -> str:
     return url.rstrip("/")
 
 def _get_app_path(url: str) -> str:
-    ''' Extract the app path from a Bokeh server URL
+    """ Extract the app path from a Bokeh server URL
+
 
     Args:
         url (str) :
@@ -311,14 +319,15 @@ def _get_app_path(url: str) -> str:
     Returns:
         str
 
-    '''
+    """
     app_path = urlparse(url).path.rstrip("/")
     if not app_path.startswith("/"):
         app_path = "/" + app_path
     return app_path
 
 def _process_arguments(arguments: dict[str, str] | None) -> str:
-    ''' Return user-supplied HTML arguments to add to a Bokeh server URL.
+    """ Return user-supplied HTML arguments to add to a Bokeh server URL.
+
 
     Args:
         arguments (dict[str, object]) :
@@ -327,29 +336,32 @@ def _process_arguments(arguments: dict[str, str] | None) -> str:
     Returns:
         str
 
-    '''
+    """
     if arguments is None:
         return ""
-    result = ""
+    fragments = []
     for key, value in arguments.items():
         if not key.startswith("bokeh-"):
-            result += f"&{quote_plus(str(key))}={quote_plus(str(value))}"
-    return result
+            fragments.append(
+                f"&{quote_plus(str(key))}={quote_plus(str(value))}"
+            )
+    return "".join(fragments)
 
 def _process_app_path(app_path: str) -> str:
-    ''' Return an app path HTML argument to add to a Bokeh server URL.
+    """ Return an app path HTML argument to add to a Bokeh server URL.
+
 
     Args:
         app_path (str) :
             The app path to add. If the app path is ``/`` then it will be
             ignored and an empty string returned.
 
-    '''
+    """
     if app_path == "/": return ""
     return "&bokeh-app-path=" + app_path
 
 def _process_relative_urls(relative_urls: bool, url: str) -> str:
-    ''' Return an absolute URL HTML argument to add to a Bokeh server URL, if
+    """ Return an absolute URL HTML argument to add to a Bokeh server URL, if
     requested.
 
     Args:
@@ -362,12 +374,13 @@ def _process_relative_urls(relative_urls: bool, url: str) -> str:
     Returns:
         str
 
-    '''
+    """
     if relative_urls: return ""
     return "&bokeh-absolute-url=" + url
 
 def _process_resources(resources: Literal["default"] | None) -> str:
-    ''' Return an argument to suppress normal Bokeh server resources, if requested.
+    """ Return an argument to suppress normal Bokeh server resources, if requested.
+
 
     Args:
         resources ("default" or None) :
@@ -376,7 +389,7 @@ def _process_resources(resources: Literal["default"] | None) -> str:
     Returns:
         str
 
-    '''
+    """
     if resources not in ("default", None):
         raise ValueError("`resources` must be either 'default' or None.")
     if resources is None:
@@ -384,7 +397,8 @@ def _process_resources(resources: Literal["default"] | None) -> str:
     return ""
 
 def _src_path(url: str, elementid: ID) -> str:
-    ''' Return a base autoload URL for a given element ID
+    """ Return a base autoload URL for a given element ID
+
 
     Args:
         url (str) :
@@ -396,7 +410,7 @@ def _src_path(url: str, elementid: ID) -> str:
     Returns:
         str
 
-    '''
+    """
     return url + "/autoload.js?bokeh-autoload-element=" + elementid
 
 #-----------------------------------------------------------------------------
