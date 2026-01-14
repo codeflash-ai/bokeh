@@ -257,7 +257,8 @@ class PropertyValueList(PropertyValueContainer, list[T]):
 
     @notify_owner
     def remove(self, obj):
-        return super().remove(obj)
+        # Use list's remove directly, avoids method resolution slowing down next-MRO call
+        return list.remove(self, obj)
 
     @notify_owner
     def reverse(self):
