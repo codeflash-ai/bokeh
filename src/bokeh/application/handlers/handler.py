@@ -210,10 +210,9 @@ class Handler:
         ''' Return a path to app-specific static resources, if applicable.
 
         '''
-        if self.failed:
+        if self._failed:
             return None
-        else:
-            return self._static
+        return self._static
 
     def url_path(self) -> str | None:
         ''' Returns a default URL path, if applicable.
@@ -226,6 +225,10 @@ class Handler:
 
         '''
         return None
+
+    @property
+    def failed(self) -> bool:
+        return self._failed
 
 
 def handle_exception(handler: Handler | CodeRunner, e: Exception) -> None:
