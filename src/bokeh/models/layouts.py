@@ -14,6 +14,10 @@
 from __future__ import annotations
 
 import logging # isort:skip
+from bokeh.core.has_props import abstract
+from bokeh.core.validation import warning
+from bokeh.core.validation.warnings import EMPTY_LAYOUT
+
 log = logging.getLogger(__name__)
 
 #-----------------------------------------------------------------------------
@@ -477,8 +481,7 @@ class FlexBox(LayoutDOM):
 
     @warning(EMPTY_LAYOUT)
     def _check_empty_layout(self):
-        from itertools import chain
-        if not list(chain(self.children)):
+        if not self.children:
             return str(self)
 
     @warning(BOTH_CHILD_AND_ROOT)
