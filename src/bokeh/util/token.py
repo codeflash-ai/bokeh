@@ -17,7 +17,10 @@ other sessions hosted by the server.
 #-----------------------------------------------------------------------------
 from __future__ import annotations
 
+from bokeh.settings import settings
+
 import logging # isort:skip
+
 log = logging.getLogger(__name__)
 
 #-----------------------------------------------------------------------------
@@ -211,13 +214,14 @@ def check_session_id_signature(session_id: str,
     with the correct secret key. If signed sessions are disabled, this function
     always returns True.
     """
-    secret_key = _ensure_bytes(secret_key)
     if signed:
         id_pieces = session_id.split('.', 1)
         if len(id_pieces) != 2:
             return False
         provided_id_signature = id_pieces[1]
-        expected_id_signature = _signature(id_pieces[0], secret_key)
+        # Only convert secret_key to bytes if necessary
+        secret_key_bytes = _ensure_bytes(secret_key)
+        expected_id_signature = _signature(id_pieces[0], secret_key_bytes)
         return hmac.compare_digest(
             expected_id_signature, provided_id_signature,
         )
@@ -274,7 +278,9 @@ def _ensure_bytes(secret_key: str | bytes | None) -> bytes | None:
     elif isinstance(secret_key, bytes):
         return secret_key
     else:
-        return codecs.encode(secret_key, 'utf-8')
+        # codecs.encode is nearly the same as bytes(s, "utf-8") / s.encode(), but s.encode() is faster
+        # This preserves exact behavior for all string inputs
+        return secret_key.encode('utf-8')
 
 # this is broken out for unit testability
 def _reseed_if_needed(using_sysrandom: bool, secret_key: bytes | None) -> None:
@@ -313,10 +319,16 @@ def _base64_decode(encoded: bytes | str) -> bytes:
 
 def _signature(base_id: str, secret_key: bytes | None) -> str:
     secret_key = _ensure_bytes(secret_key)
-    base_id_encoded = codecs.encode(base_id, "utf-8")
+    # Optimize: s.encode is faster than codecs.encode for str->bytes
+    base_id_encoded = base_id.encode("utf-8")
     assert secret_key is not None
     signer = hmac.new(secret_key, base_id_encoded, hashlib.sha256)
-    return _base64_encode(signer.digest())
+    # Inline _base64_encode from bokeh/util/token.py to avoid overhead
+    encoded = signer.digest()
+    # Fast base64 encode, strip padding, and decode to ASCII:
+    import base64
+    encoded_str = base64.urlsafe_b64encode(encoded).rstrip(b'=').decode('ascii')
+    return str(encoded_str)
 
 def _get_random_string(
         length: int = 44,
