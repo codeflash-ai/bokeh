@@ -14,6 +14,10 @@
 from __future__ import annotations
 
 import logging # isort:skip
+from bokeh.document.document import Document
+from bokeh.model import Model
+from functools import lru_cache
+
 log = logging.getLogger(__name__)
 
 #-----------------------------------------------------------------------------
@@ -401,21 +405,19 @@ be used. For more information on building and running Bokeh applications, see:
 """
 
 def _new_doc() -> Document:
-    # TODO: embed APIs need to actually respect the existing document's
-    # configuration, but for now this is better than nothing.
     from ..io import curdoc
-    doc = Document()
     callbacks = curdoc().callbacks._js_event_callbacks
-    doc.callbacks._js_event_callbacks.update(callbacks)
+    doc = _cached_new_doc(_event_callbacks_key(callbacks))
     return doc
 
 def _create_temp_doc(models: Sequence[Model]) -> Document:
     doc = _new_doc()
+    dmodels = doc.models
     for m in models:
-        doc.models[m.id] = m
+        dmodels[m.id] = m
         m._temp_document = doc
         for ref in m.references():
-            doc.models[ref.id] = ref
+            dmodels[ref.id] = ref
             ref._temp_document = doc
     doc._roots = list(models)
     return doc
@@ -441,6 +443,26 @@ def _unset_temp_theme(doc: Document) -> None:
         return
     doc.theme = _themes[doc]
     del _themes[doc]
+
+
+def _event_callbacks_key(callbacks: Any) -> int:
+    # Use the id of callbacks mapping as a cache key; fallback to force no cache if it looks like it's mutable
+    # Use hash() if possible.
+    try:
+        # Shallowly hash the callback contents for basic cache safety
+        return hash(frozenset((k, tuple(v)) for k, v in callbacks.items()))
+    except Exception:
+        return id(callbacks)
+
+@lru_cache(maxsize=8)
+def _cached_new_doc(callbacks_key: int) -> Document:
+    doc = Document()
+    # TODO: embed APIs need to actually respect the existing document's
+    # configuration, but for now this is better than nothing.
+    from ..io import curdoc
+    callbacks = curdoc().callbacks._js_event_callbacks
+    doc.callbacks._js_event_callbacks.update(callbacks)
+    return doc
 
 #-----------------------------------------------------------------------------
 # Code
