@@ -42,6 +42,9 @@ In general, functions in this module convert values in the following way:
 from __future__ import annotations
 
 import logging # isort:skip
+from bokeh.core.serialization import Buffer, Serialized
+from bokeh.settings import settings
+
 log = logging.getLogger(__name__)
 
 #-----------------------------------------------------------------------------
@@ -69,7 +72,7 @@ __all__ = (
 #-----------------------------------------------------------------------------
 
 def serialize_json(obj: Any | Serialized[Any], *, pretty: bool | None = None, indent: int | None = None) -> str:
-    '''
+    """
     Convert an object or a serialized representation to a JSON string.
 
     This function accepts Python-serializable objects and converts them to
@@ -147,19 +150,14 @@ def serialize_json(obj: Any | Serialized[Any], *, pretty: bool | None = None, in
             >>> import json
             >>> json.dumps(s.encode(obj))
 
-    '''
+    """
     pretty = settings.pretty(pretty)
 
-    if pretty:
-        separators=(",", ": ")
-    else:
-        separators=(",", ":")
+    separators = (",", ": ") if pretty else (",", ":")
+
 
     if pretty and indent is None:
         indent = 2
-
-    content: Any
-    buffers: list[Buffer]
     if isinstance(obj, Serialized):
         content = obj.content
         buffers = obj.buffers or []
