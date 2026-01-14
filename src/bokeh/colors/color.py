@@ -384,7 +384,8 @@ class HSL(Color):
     '''
 
     def __init__(self, h: float, s: float, l: float, a: float = 1.0) -> None:
-        '''
+        """
+
 
         Args:
             h (int) :
@@ -399,19 +400,22 @@ class HSL(Color):
             a (float, optional) :
                 An alpha value for this color in [0, 1] (default: 1.0)
 
-        '''
+        """
         self.h = h
         self.s = s
         self.l = l
         self.a = a
 
     def copy(self) -> HSL:
-        ''' Return a copy of this color value.
+        """ Return a copy of this color value.
+
 
         Returns:
             :class:`~bokeh.colors.HSL`
 
-        '''
+        """
+        # Direct instantiation is faster and does not require method lookup,
+        # but class is not meant to be subclassed, so use class directly.
         return HSL(self.h, self.s, self.l, self.a)
 
     def darken(self, amount: float) -> HSL:
@@ -429,7 +433,8 @@ class HSL(Color):
 
     @classmethod
     def from_hsl(cls, value: HSL) -> HSL:
-        ''' Copy an HSL color from another HSL color value.
+        """ Copy an HSL color from another HSL color value.
+
 
         Args:
             value (HSL) :
@@ -438,8 +443,9 @@ class HSL(Color):
         Returns:
             :class:`~bokeh.colors.hsl.HSL`
 
-        '''
-        return value.copy()
+        """
+        # Avoids one function call by directly constructing
+        return HSL(value.h, value.s, value.l, value.a)
 
     @classmethod
     def from_rgb(cls, value: RGB) -> HSL:
