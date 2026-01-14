@@ -145,10 +145,19 @@ def from_networkx(graph: nx.Graph, layout_function: dict[int | str, Sequence[flo
 
 def _handle_sublists(values):
     # if any of the items is non-scalar, they all must be
-    if any(isinstance(x, (list, tuple)) for x in values):
-        if not all(isinstance(x, (list, tuple)) for x in values if x is not None):
-            raise ValueError("Can't mix scalar and non-scalar values for graph attributes")
-        return [[] if x is None else list(x) for x in values]
+    # Use generator and precompute list to avoid repeated iteration
+    has_non_scalar = False
+    for x in values:
+        if isinstance(x, (list, tuple)):
+            has_non_scalar = True
+            break
+    if has_non_scalar:
+        # Verify all non-None elements are list/tuple, early exit on first error
+        for x in values:
+            if x is not None and not isinstance(x, (list, tuple)):
+                raise ValueError("Can't mix scalar and non-scalar values for graph attributes")
+        # Use list comprehension for final transformation
+        return [ [] if x is None else list(x) for x in values ]
     return values
 
 #-----------------------------------------------------------------------------
