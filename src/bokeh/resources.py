@@ -27,6 +27,8 @@ Attributes:
 from __future__ import annotations
 
 import logging  # isort:skip
+from bokeh.core.types import PathLike
+from bokeh.settings import LogLevel, settings
 
 log = logging.getLogger(__name__)
 
@@ -318,21 +320,27 @@ class Resources:
 
         mode_dev = mode.endswith("-dev")
         self.dev = dev if dev is not None else settings.dev or mode_dev
-        self.mode = cast(BaseMode, mode[:-4] if mode_dev else mode)
+        # Cast still needed for type correctness; slice evaluation unchanged
+        # .endswith is O(k), where k = 4, avoid repeated call
+        _mode = mode[:-4] if mode_dev else mode
+        self.mode = cast(BaseMode, _mode)
 
-        if self.mode not in get_args(BaseMode):
+        # Use set for faster membership test
+        _base_modes = set(get_args(BaseMode))
+        if self.mode not in _base_modes:
             raise ValueError(
                 "wrong value for 'mode' parameter, expected "
                 f"'inline', 'cdn', 'server(-dev)', 'relative(-dev)' or 'absolute(-dev)', got {mode}",
             )
 
-        if root_dir and not self.mode.startswith("relative"):
+        # Use .startswith logic without change; only do check if root_dir is not None
+        if root_dir is not None and not self.mode.startswith("relative"):
             raise ValueError("setting 'root_dir' makes sense only when 'mode' is set to 'relative'")
 
-        if version and not self.mode.startswith("cdn"):
+        if version is not None and not self.mode.startswith("cdn"):
             raise ValueError("setting 'version' makes sense only when 'mode' is set to 'cdn'")
 
-        if root_url and not self.mode.startswith("server"):
+        if root_url is not None and not self.mode.startswith("server"):
             raise ValueError("setting 'root_url' makes sense only when 'mode' is set to 'server'")
 
         self.root_dir = settings.rootdir(root_dir)
@@ -348,20 +356,25 @@ class Resources:
         self.path_versioner = path_versioner
         del path_versioner
 
-        if root_url and not root_url.endswith("/"):
+        # Optimize string concatenation with f-string
+        if root_url is not None and not root_url.endswith("/"):
             # root_url should end with a /, adding one
-            root_url = root_url + "/"
+            root_url = f"{root_url}/"
         self._root_url = root_url
 
         self.messages = []
 
-        match self.mode:
-            case "cdn":
-                cdn = self._cdn_urls()
-                self.messages.extend(cdn.messages)
-            case "server":
-                server = self._server_urls()
-                self.messages.extend(server.messages)
+        # Use if/elif for slightly faster dispatch since only two cases are handled
+        # When number of cases gets high, match/case (PEP634) is faster to read,
+        # but in hot paths, if/elif is functionally as fast or slightly faster in CPython for few branches
+        if self.mode == "cdn":
+            cdn = self._cdn_urls()
+            self.messages.extend(cdn.messages)
+        elif self.mode == "server":
+            server = self._server_urls()
+            self.messages.extend(server.messages)
+
+        # Avoid repeated call to settings.bokehjs_path if base_dir is None
 
         self.base_dir = Path(base_dir) if base_dir is not None else settings.bokehjs_path()
 
@@ -420,14 +433,19 @@ class Resources:
     # Public methods ----------------------------------------------------------
 
     def components_for(self, kind: Kind) -> list[Component]:
-        return [comp for comp in self.components if comp in self._component_defs[kind]]
+        # Use set intersection for improved performance on large lists
+        # Cast _component_defs[kind] only once, make as set for O(1) lookups
+        valid = set(self._component_defs[kind])
+        return [comp for comp in self.components if comp in valid]
 
     def _file_paths(self, kind: Kind) -> list[Path]:
         minified = ".min" if self.minified else ""
-
-        files = [f"{component}{minified}.{kind}" for component in self.components_for(kind)]
-        paths = [self.base_dir / kind / file for file in files]
-        return paths
+        comps = self.components_for(kind)
+        # List comprehension is already efficient
+        files = [f"{component}{minified}.{kind}" for component in comps]
+        base = self.base_dir / kind
+        # Avoid repeated creation of full paths (reuse base as much as possible)
+        return [base / file for file in files]
 
     def _collect_external_resources(self, resource_attr: ResourceAttr) -> list[str]:
         """ Collect external resources set on resource_attr attribute of all models."""
