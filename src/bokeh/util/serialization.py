@@ -20,7 +20,10 @@ performance and efficiency. The list of supported dtypes is:
 #-----------------------------------------------------------------------------
 from __future__ import annotations
 
+from bokeh.core.types import ID
+
 import logging # isort:skip
+
 log = logging.getLogger(__name__)
 
 #-----------------------------------------------------------------------------
@@ -274,7 +277,8 @@ def make_id() -> ID:
         return make_globally_unique_id()
 
 def make_globally_unique_id() -> ID:
-    ''' Return a globally unique UUID.
+    """ Return a globally unique UUID.
+
 
     Some situations, e.g. id'ing dynamically created Divs in HTML documents,
     always require globally unique IDs.
@@ -282,13 +286,14 @@ def make_globally_unique_id() -> ID:
     Returns:
         str
 
-    '''
-    from ..core.types import ID
+    """
+    # Removing the redundant import of ID from ..core.types since it is already imported above
 
     return ID(str(uuid.uuid4()))
 
 def make_globally_unique_css_safe_id() -> ID:
-    ''' Return a globally unique CSS-safe UUID.
+    """ Return a globally unique CSS-safe UUID.
+
 
     Some situations, e.g. id'ing dynamically created Divs in HTML documents,
     always require globally unique IDs. ID generated with this function can
@@ -297,17 +302,21 @@ def make_globally_unique_css_safe_id() -> ID:
     Returns:
         str
 
-    '''
-    from ..core.types import ID
+    """
+    # Removing the redundant import of ID from ..core.types since it is already imported above
+
 
     max_iter = 100
 
-    for _i in range(0, max_iter):
-        id = make_globally_unique_id()
-        if id[0].isalpha():
-            return id
+    # Optimization: inline uuid generation and checking, avoiding make_globally_unique_id
+    # Indirectly calling str(uuid.uuid4()) saves function call overhead for up to 100 iterations
+    for _ in range(max_iter):
+        uid = str(uuid.uuid4())
+        if uid[0].isalpha():
+            return ID(uid)
 
-    return ID(f"bk-{make_globally_unique_id()}")
+    # Fallback, as before: prefix with 'bk-'
+    return ID(f"bk-{str(uuid.uuid4())}")
 
 def array_encoding_disabled(array: npt.NDArray[Any]) -> bool:
     ''' Determine whether an array may be binary encoded.
