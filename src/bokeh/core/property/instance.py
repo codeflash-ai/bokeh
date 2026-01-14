@@ -17,6 +17,8 @@ where one Bokeh model refers to another.
 from __future__ import annotations
 
 import logging # isort:skip
+from bokeh.core.property._sphinx import model_link, property_link, register_type_link
+
 log = logging.getLogger(__name__)
 
 #-----------------------------------------------------------------------------
@@ -39,6 +41,8 @@ from ..serialization import Serializable
 from ._sphinx import model_link, property_link, register_type_link
 from .bases import Init, Property
 from .singletons import Undefined
+
+FunctionType = types.FunctionType
 
 #-----------------------------------------------------------------------------
 # Globals and constants
@@ -171,7 +175,7 @@ def _sphinx_type_link(obj: Instance[Any]) -> str:
     # we can't necessarily evaluate pure function (e.g. lambda) Instance
     # initializers, since they may contain circular references to the (not
     # yet fully defined at this point) Model
-    if isinstance(obj._instance_type, types.FunctionType):
+    if isinstance(obj._instance_type, FunctionType):
         return f"{property_link(obj)}"
     if isinstance(obj._instance_type, str):
         return f"{property_link(obj)}({obj._instance_type!r})"
