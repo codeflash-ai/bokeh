@@ -411,6 +411,8 @@ source file.
 from __future__ import annotations
 
 import logging # isort:skip
+from bokeh.colors.util import RGB
+
 log = logging.getLogger(__name__)
 
 #-----------------------------------------------------------------------------
@@ -1673,7 +1675,12 @@ def interp_palette(palette: Palette, n: int) -> Palette:
     b = np.interp(fractions, integers, rgba_array[:, 2]).astype(np.uint8)
     a = np.interp(fractions, integers, rgba_array[:, 3]) / 255.0  # Remains floating-point
 
-    return tuple(RGB(*args).to_hex() for args in zip(r, g, b, a))
+    # Use direct string formatting instead of RGB object instantiation
+    a_bytes = np.round(a * 255).astype(np.uint8)
+    return tuple(
+        f"#{rv:02x}{gv:02x}{bv:02x}{av:02x}" if av < 255 else f"#{rv:02x}{gv:02x}{bv:02x}"
+        for rv, gv, bv, av in zip(r, g, b, a_bytes)
+    )
 
 def magma(n: int) -> Palette:
     """ Generate a palette of colors from the Magma palette.
