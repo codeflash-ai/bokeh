@@ -20,7 +20,11 @@ performance and efficiency. The list of supported dtypes is:
 #-----------------------------------------------------------------------------
 from __future__ import annotations
 
+from bokeh.core.types import ID as _CoreID
+from bokeh.settings import settings
+
 import logging # isort:skip
+
 log = logging.getLogger(__name__)
 
 #-----------------------------------------------------------------------------
@@ -251,7 +255,8 @@ def convert_datetime_array(array: npt.NDArray[Any]) -> npt.NDArray[np.floating[A
     return array
 
 def make_id() -> ID:
-    ''' Return a new unique ID for a Bokeh object.
+    """ Return a new unique ID for a Bokeh object.
+
 
     Normally this function will return simple monotonically increasing integer
     IDs (as strings) for identifying Bokeh objects within a Document. However,
@@ -261,20 +266,19 @@ def make_id() -> ID:
     Returns:
         str
 
-    '''
+    """
     global _simple_id
-
-    from ..core.types import ID
 
     if settings.simple_ids():
         with _simple_id_lock:
             _simple_id += 1
-            return ID(f"p{_simple_id}")
+            return _CoreID(f"p{_simple_id}")
     else:
         return make_globally_unique_id()
 
 def make_globally_unique_id() -> ID:
-    ''' Return a globally unique UUID.
+    """ Return a globally unique UUID.
+
 
     Some situations, e.g. id'ing dynamically created Divs in HTML documents,
     always require globally unique IDs.
@@ -282,10 +286,9 @@ def make_globally_unique_id() -> ID:
     Returns:
         str
 
-    '''
-    from ..core.types import ID
-
-    return ID(str(uuid.uuid4()))
+    """
+    # Use the cached _CoreID type for efficiency.
+    return _CoreID(str(uuid.uuid4()))
 
 def make_globally_unique_css_safe_id() -> ID:
     ''' Return a globally unique CSS-safe UUID.
