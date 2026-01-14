@@ -15,6 +15,8 @@ models for instances that match specified criteria.
 from __future__ import annotations
 
 import logging # isort:skip
+from bokeh.model import Model
+
 log = logging.getLogger(__name__)
 
 #-----------------------------------------------------------------------------
@@ -105,7 +107,8 @@ def is_single_string_selector(selector: SelectorType, field: str) -> bool:
     return  len(selector) == 1 and field in selector and isinstance(selector[field], str)
 
 def match(obj: Model, selector: SelectorType) -> bool:
-    ''' Test whether a given Bokeh model matches a given selector.
+    """ Test whether a given Bokeh model matches a given selector.
+
 
     Args:
         obj (Model) : object to test
@@ -171,7 +174,8 @@ def match(obj: Model, selector: SelectorType) -> bool:
         >>> match(p, {'tags': ["foo"]})
         False
 
-    '''
+    """
+    # Fast-path for str equality to avoid repeated isinstance checks in loop
     for key, val in selector.items():
 
         # test attributes
@@ -179,21 +183,39 @@ def match(obj: Model, selector: SelectorType) -> bool:
 
             # special case 'type'
             if key == "type":
-                # type supports IN, check for that first
-                if isinstance(val, dict) and list(val.keys()) == [IN]:
-                    if not any(isinstance(obj, x) for x in val[IN]): return False
-                # otherwise just check the type of the object against val
-                elif not isinstance(obj, val): return False
+                # Avoid creating list(val.keys()) for every match
+                if isinstance(val, dict):
+                    keys = val.keys()
+                    # Fastpath for IN operator
+                    if len(keys) == 1:
+                        thekey = next(iter(keys))
+                        if thekey is IN:
+                            candidates = val[IN]
+                            # Avoid creating intermediate list by returning on first match
+                            for x in candidates:
+                                if isinstance(obj, x):
+                                    break
+                            else:
+                                return False
+                            continue
+                if not isinstance(obj, val): return False
+
 
             # special case 'tag'
             elif key == 'tags':
+                o_tags = obj.tags
+                # Fast str case
                 if isinstance(val, str):
-                    if val not in obj.tags: return False
+                    if val not in o_tags: return False
                 else:
                     try:
-                        if not set(val) & set(obj.tags): return False
+                        set_val = set(val)
+                        # If set is empty, always False by logic
+                        if not set_val & set(o_tags): return False
                     except TypeError:
-                        if val not in obj.tags: return False
+                        # val is not iterable, fallback to old behavior
+                        if val not in o_tags: return False
+
 
             # if the object doesn't have the attr, it doesn't match
             elif not hasattr(obj, key): return False
@@ -213,7 +235,10 @@ def match(obj: Model, selector: SelectorType) -> bool:
 
         # test operands
         elif key in _operators:
-            if not _operators[key](obj, val): return False
+            # Use local var for operator lookup, also allows C short-circuit
+            op = _operators[key]
+            if not op(obj, val): return False
+
 
         else:
             raise ValueError("malformed query selector")
@@ -358,7 +383,12 @@ _operators: dict[type[_Operator], Callable[[Any, Any], Any]] = {
 
 # realization of the OR operator
 def _or(obj: Model, selectors: Iterable[SelectorType]) -> bool:
-    return any(match(obj, selector) for selector in selectors)
+    # Convert to tuple only if selector is not already a tuple/list to allow repeated iteration in generators
+    # but as match is recursive and selectors is always used fresh, keep as-is for fastest path.
+    for selector in selectors:
+        if match(obj, selector):
+            return True
+    return False
 
 #-----------------------------------------------------------------------------
 # Code
