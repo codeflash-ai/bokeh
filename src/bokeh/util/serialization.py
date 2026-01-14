@@ -21,6 +21,8 @@ performance and efficiency. The list of supported dtypes is:
 from __future__ import annotations
 
 import logging # isort:skip
+from bokeh.core.types import ID
+
 log = logging.getLogger(__name__)
 
 #-----------------------------------------------------------------------------
@@ -274,7 +276,8 @@ def make_id() -> ID:
         return make_globally_unique_id()
 
 def make_globally_unique_id() -> ID:
-    ''' Return a globally unique UUID.
+    """ Return a globally unique UUID.
+
 
     Some situations, e.g. id'ing dynamically created Divs in HTML documents,
     always require globally unique IDs.
@@ -282,13 +285,13 @@ def make_globally_unique_id() -> ID:
     Returns:
         str
 
-    '''
-    from ..core.types import ID
+    """
 
     return ID(str(uuid.uuid4()))
 
 def make_globally_unique_css_safe_id() -> ID:
-    ''' Return a globally unique CSS-safe UUID.
+    """ Return a globally unique CSS-safe UUID.
+
 
     Some situations, e.g. id'ing dynamically created Divs in HTML documents,
     always require globally unique IDs. ID generated with this function can
@@ -297,17 +300,16 @@ def make_globally_unique_css_safe_id() -> ID:
     Returns:
         str
 
-    '''
-    from ..core.types import ID
+    """
 
     max_iter = 100
-
-    for _i in range(0, max_iter):
-        id = make_globally_unique_id()
-        if id[0].isalpha():
-            return id
-
-    return ID(f"bk-{make_globally_unique_id()}")
+    for _ in range(max_iter):
+        id_str = str(uuid.uuid4())
+        # The first char of standard UUIDs is always hex digit; so pre-pend
+        # alpha if necessary. Instead, start with 'bk-' if failed.
+        if id_str[0].isalpha():
+            return ID(id_str)
+    return ID(f"bk-{str(uuid.uuid4())}")
 
 def array_encoding_disabled(array: npt.NDArray[Any]) -> bool:
     ''' Determine whether an array may be binary encoded.
