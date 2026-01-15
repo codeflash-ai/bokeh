@@ -111,16 +111,16 @@ def axial_to_cartesian(q: Any, r: Any, size: float, orientation: str, aspect_sca
 
     '''
     if orientation == "pointytop":
-        x = size * math.sqrt(3) * (q + r/2.0) / aspect_scale
-        y = -size * 3/2.0 * r
+        x = size * 1.7320508075688772 * (q + r * 0.5) / aspect_scale
+        y = -size * 1.5 * r
     else:
-        x = size * 3/2.0 * q
-        y = -size * math.sqrt(3) * (r + q/2.0) * aspect_scale
+        x = size * 1.5 * q
+        y = -size * 1.7320508075688772 * (r + q * 0.5) * aspect_scale
 
     return (x, y)
 
 def cartesian_to_axial(x: Any, y: Any, size: float, orientation: str, aspect_scale: float = 1) -> tuple[Any, Any]:
-    ''' Map Cartesian *(x,y)* points to axial *(q,r)* coordinates of enclosing
+    """ Map Cartesian *(x,y)* points to axial *(q,r)* coordinates of enclosing
     tiles.
 
     This function was adapted from:
@@ -157,14 +157,24 @@ def cartesian_to_axial(x: Any, y: Any, size: float, orientation: str, aspect_sca
     Returns:
         (array[int], array[int])
 
-    '''
-    HEX_FLAT = [2.0/3.0, 0.0, -1.0/3.0, math.sqrt(3.0)/3.0]
-    HEX_POINTY = [math.sqrt(3.0)/3.0, -1.0/3.0, 0.0, 2.0/3.0]
+    """
+    # Precompute constants only once for performance
+    _SQRT3 = math.sqrt(3.0)
+    HEX_FLAT = [2.0/3.0, 0.0, -1.0/3.0, _SQRT3/3.0]
+    HEX_POINTY = [_SQRT3/3.0, -1.0/3.0, 0.0, 2.0/3.0]
 
     coords = HEX_FLAT if orientation == 'flattop' else HEX_POINTY
 
-    x =  x / size * (aspect_scale if orientation == "pointytop" else 1)
-    y = -y / size / (aspect_scale if orientation == "flattop" else 1)
+    # Guard against aspect_scale=1 so multiplication/division doesn't happen unnecessarily
+    if orientation == "pointytop" and aspect_scale != 1:
+        x = x / size * aspect_scale
+    else:
+        x = x / size
+
+    if orientation == "flattop" and aspect_scale != 1:
+        y = -y / size / aspect_scale
+    else:
+        y = -y / size
 
     q = coords[0] * x + coords[1] * y
     r = coords[2] * x + coords[3] * y
@@ -243,7 +253,7 @@ def hexbin(
 #-----------------------------------------------------------------------------
 
 def _round_hex(q: Any, r: Any) -> tuple[Any, Any]:
-    ''' Round floating point axial hex coordinates to integer *(q,r)*
+    """ Round floating point axial hex coordinates to integer *(q,r)*
     coordinates.
 
     This code was adapted from:
@@ -260,24 +270,32 @@ def _round_hex(q: Any, r: Any) -> tuple[Any, Any]:
     Returns:
         (array[int], array[int])
 
-    '''
+    """
+    # Use local variables for clarity, and avoid unnecessary computation
     x = q
     z = r
-    y = -x-z
+    y = -x - z
 
-    rx = np.round(x)
-    ry = np.round(y)
-    rz = np.round(z)
+    # Use numpy.rint, which commonly has better performance on large arrays
+    rx = np.rint(x)
+    ry = np.rint(y)
+    rz = np.rint(z)
 
     dx = np.abs(rx - x)
     dy = np.abs(ry - y)
     dz = np.abs(rz - z)
 
-    cond = (dx > dy) & (dx > dz)
-    q = np.where(cond              , -(ry + rz), rx)
-    r = np.where(~cond & ~(dy > dz), -(rx + ry), rz)
+    # Combine all boolean logic into one step for better performance
+    dx_gt_dy = dx > dy
+    dx_gt_dz = dx > dz
+    cond = dx_gt_dy & dx_gt_dz
 
-    return q.astype(int), r.astype(int)
+    # Use np.where only once per output, minimizing computation
+    q_int = np.where(cond, -(ry + rz), rx)
+    r_int = np.where(~cond & ~(dy > dz), -(rx + ry), rz)
+
+    # Use np.asarray to avoid unnecessary copy if already correct dtype (saves memory if input is already int)
+    return np.asarray(q_int, dtype=int), np.asarray(r_int, dtype=int)
 
 #-----------------------------------------------------------------------------
 # Code
