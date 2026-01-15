@@ -13,7 +13,10 @@
 #-----------------------------------------------------------------------------
 from __future__ import annotations
 
+from bokeh.core.serialization import AnyRep, Serializable, Serializer
+
 import logging # isort:skip
+
 log = logging.getLogger(__name__)
 
 #-----------------------------------------------------------------------------
