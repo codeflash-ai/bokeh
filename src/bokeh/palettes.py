@@ -412,13 +412,6 @@ from __future__ import annotations
 
 import logging # isort:skip
 log = logging.getLogger(__name__)
-
-#-----------------------------------------------------------------------------
-# Imports
-#-----------------------------------------------------------------------------
-
-# Standard library imports
-import math
 from copy import deepcopy
 from typing import TYPE_CHECKING, TypeAlias
 
@@ -1526,7 +1519,7 @@ def linear_palette(palette: Palette, n: int) -> Palette:
     """
     if n > len(palette):
         raise ValueError(f"Requested {n} colors, function can only return colors up to the base palette's length ({len(palette)})")
-    return tuple( palette[math.floor(i)] for i in np.linspace(0, len(palette)-1, num=n) )
+    return _linear_palette_fast(palette, n)
 
 def diverging_palette(palette1: Palette, palette2: Palette, n: int, midpoint: float = 0.5) -> Palette:
     """ Generate a new palette by combining exactly two input palettes.
@@ -1931,6 +1924,19 @@ def to_rgba_array(palette: Palette) -> npt.NDArray[np.uint8]:
         rgba_array[i] = (rgba.r, rgba.g, rgba.b, rgba.a*255)
 
     return rgba_array
+
+
+def _linear_palette_fast(palette: Palette, n: int) -> Palette:
+    """Optimized subset extraction using precomputed indices."""
+    # Use numpy to compute indices, cast to int only once, avoid math.floor
+    palette_len = len(palette)
+    if n == palette_len:
+        return palette
+    indices = np.linspace(0, palette_len-1, num=n)
+    # Unlike math.floor, numpy implicitly casts to float, so need int conversion.
+    idx = indices.astype(int)
+    # Using list comprehension is fast for short lookups, but tuple is required as output.
+    return tuple(palette[i] for i in idx)
 
 #-----------------------------------------------------------------------------
 # Private API
