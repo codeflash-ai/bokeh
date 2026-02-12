@@ -14,6 +14,9 @@
 from __future__ import annotations
 
 import logging # isort:skip
+from bokeh.document import Document
+from bokeh.model import Model
+
 log = logging.getLogger(__name__)
 
 #-----------------------------------------------------------------------------
@@ -486,14 +489,23 @@ return [...collect_svgs(Bokeh.index)]
 """
 
 def _SVG_SCRIPT(obj: Model | Document) -> str:
-    from ..document import Document
+    # Move import to module level for efficiency
+    # from ..document import Document  # Already imported above as bokeh.document.Document
 
-    if isinstance(obj, Document):
-        ids = [root.id for root in obj.roots]
+    # Use local reference for Document for isinstance to avoid repeated module lookups
+    DocumentType = Document
+
+    # Instead of list comprehension, use generator with join for faster conversion to JS array
+    if isinstance(obj, DocumentType):
+        # Use tuple comprehension and join for fast string interpolation
+        ids_str = ",".join(root.id for root in obj.roots)
     else:
-        ids = [obj.id]
-    return f"""\
-const ids = new Set({ids})
+        ids_str = obj.id
+
+    # Faster string formatting by minimizing list allocation (no wrapping of ids in Python list)
+    return (
+        f"""\
+const ids = new Set([{ids_str}])
 function* export_svgs(views) {{
   for (const view of views) {{
     // TODO: use to_blob() API in future
@@ -506,6 +518,7 @@ function* export_svgs(views) {{
 
 return [...export_svgs(Bokeh.index)]
 """
+    )
 
 _WAIT_SCRIPT = """
 // add private window prop to check that render is complete
