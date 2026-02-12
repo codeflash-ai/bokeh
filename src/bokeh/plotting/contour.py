@@ -11,6 +11,8 @@
 from __future__ import annotations
 
 import logging # isort:skip
+from bokeh.palettes import Palette, PaletteCollection, interp_palette
+
 log = logging.getLogger(__name__)
 
 #-----------------------------------------------------------------------------
@@ -304,7 +306,8 @@ def _color(color: ContourColorOrPalette, n: int) -> ContourColor:
     if isinstance(color, dict):
         return _palette_from_collection(color, n)
 
-    if isinstance(color, Sequence) and not isinstance(color, (bytes, str)) and len(color) != n:
+    is_seq = isinstance(color, Sequence) and not isinstance(color, (bytes, str))
+    if is_seq and len(color) != n:
         return interp_palette(color, n)
 
     return color

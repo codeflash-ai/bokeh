@@ -411,6 +411,8 @@ source file.
 from __future__ import annotations
 
 import logging # isort:skip
+from bokeh.colors.util import RGB
+
 log = logging.getLogger(__name__)
 
 #-----------------------------------------------------------------------------
@@ -1668,12 +1670,24 @@ def interp_palette(palette: Palette, n: int) -> Palette:
     integers = np.arange(npalette)
     fractions = np.linspace(0, npalette-1, n)
 
+    # Use numpy's interpolation for better performance
     r = np.interp(fractions, integers, rgba_array[:, 0]).astype(np.uint8)
     g = np.interp(fractions, integers, rgba_array[:, 1]).astype(np.uint8)
     b = np.interp(fractions, integers, rgba_array[:, 2]).astype(np.uint8)
-    a = np.interp(fractions, integers, rgba_array[:, 3]) / 255.0  # Remains floating-point
+    a = np.interp(fractions, integers, rgba_array[:, 3]).astype(np.uint8)  # uint8 alpha (0-255)
 
-    return tuple(RGB(*args).to_hex() for args in zip(r, g, b, a))
+    # Generate full RGBA hex if alpha < 255 in any color, else use RGB hex
+    has_alpha = np.any(a < 255)
+
+    if has_alpha:
+        # Format as #RRGGBBAA
+        # Build array of 'hex' strings directly
+        hexes = [f"#{rv:02x}{gv:02x}{bv:02x}{av:02x}" for rv, gv, bv, av in zip(r, g, b, a)]
+    else:
+        # Format as #RRGGBB
+        hexes = [f"#{rv:02x}{gv:02x}{bv:02x}" for rv, gv, bv in zip(r, g, b)]
+
+    return tuple(hexes)
 
 def magma(n: int) -> Palette:
     """ Generate a palette of colors from the Magma palette.
