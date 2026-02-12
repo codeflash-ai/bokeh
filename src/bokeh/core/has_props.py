@@ -21,6 +21,11 @@ serializable properties.
 from __future__ import annotations
 
 import logging # isort:skip
+from bokeh.core.property.descriptor_factory import PropertyDescriptorFactory
+from bokeh.core.property.descriptors import PropertyDescriptor
+from bokeh.core.property.override import Override
+from bokeh.util.warnings import warn
+
 log = logging.getLogger(__name__)
 
 #-----------------------------------------------------------------------------
@@ -119,19 +124,27 @@ def is_DataModel(cls: type[HasProps]) -> bool:
 
 def _overridden_defaults(class_dict: dict[str, Any]) -> dict[str, Any]:
     overridden_defaults: dict[str, Any] = {}
-    for name, prop in tuple(class_dict.items()):
+    to_del = []
+    for name, prop in class_dict.items():
         if isinstance(prop, Override):
-            del class_dict[name]
+            to_del.append(name)
             if prop.default_overridden:
                 overridden_defaults[name] = prop.default
+    # Delete keys after iteration for safety and speed
+    for name in to_del:
+        del class_dict[name]
     return overridden_defaults
 
 def _generators(class_dict: dict[str, Any]):
     generators: dict[str, PropertyDescriptorFactory[Any]] = {}
-    for name, generator in tuple(class_dict.items()):
+    to_del = []
+    for name, generator in class_dict.items():
         if isinstance(generator, PropertyDescriptorFactory):
-            del class_dict[name]
+            to_del.append(name)
             generators[name] = generator
+    # Delete keys after iteration for safety and speed
+    for name in to_del:
+        del class_dict[name]
     return generators
 
 class _ModelResolver:
@@ -186,9 +199,9 @@ class MetaHasProps(type):
     __themed_values__: dict[str, Any]
 
     def __new__(cls, class_name: str, bases: tuple[type, ...], class_dict: dict[str, Any]):
-        '''
+        """
 
-        '''
+        """
         overridden_defaults = _overridden_defaults(class_dict)
         generators = _generators(class_dict)
 
@@ -214,9 +227,11 @@ class MetaHasProps(type):
             return
 
         # Check for improperly redeclared a Property attribute.
+        # Avoid generator allocation for issubclass traversal
         base_properties: dict[str, Any] = {}
-        for base in (x for x in bases if issubclass(x, HasProps)):
-            base_properties.update(base.properties(_with_props=True))
+        for base in bases:
+            if hasattr(base, "properties") and issubclass(base, HasProps):
+                base_properties.update(base.properties(_with_props=True))
         own_properties = {k: v for k, v in cls.__dict__.items() if isinstance(v, PropertyDescriptor)}
         redeclared = own_properties.keys() & base_properties.keys()
         if redeclared:
