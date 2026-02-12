@@ -21,6 +21,8 @@ serializable properties.
 from __future__ import annotations
 
 import logging # isort:skip
+from bokeh.core.property.override import Override
+
 log = logging.getLogger(__name__)
 
 #-----------------------------------------------------------------------------
@@ -118,12 +120,17 @@ def is_DataModel(cls: type[HasProps]) -> bool:
     return issubclass(cls, HasProps) and getattr(cls, "__data_model__", False) and cls != DataModel
 
 def _overridden_defaults(class_dict: dict[str, Any]) -> dict[str, Any]:
+    # Optimized: avoid tuple(class_dict.items()) to save memory & copy cost
     overridden_defaults: dict[str, Any] = {}
-    for name, prop in tuple(class_dict.items()):
+    removals = []
+    for name, prop in class_dict.items():
         if isinstance(prop, Override):
-            del class_dict[name]
+            removals.append(name)
             if prop.default_overridden:
                 overridden_defaults[name] = prop.default
+    # Avoid mutating class_dict during iteration
+    for name in removals:
+        del class_dict[name]
     return overridden_defaults
 
 def _generators(class_dict: dict[str, Any]):
