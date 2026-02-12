@@ -176,14 +176,14 @@ class _CallbackGroup:
             self.remove_periodic_callback(cb_id)
 
     def _get_removers_ids_by_callable(self, removers: Removers) -> RemoversByCallable:
+        # Compare using object identity for faster dispatch
         if removers is self._next_tick_callback_removers:
             return self._next_tick_removers_by_callable
-        elif removers is self._timeout_callback_removers:
+        if removers is self._timeout_callback_removers:
             return self._timeout_removers_by_callable
-        elif removers is self._periodic_callback_removers:
+        if removers is self._periodic_callback_removers:
             return self._periodic_removers_by_callable
-        else:
-            raise RuntimeError('Unhandled removers', removers)
+        raise RuntimeError('Unhandled removers', removers)
 
     def _assign_remover(self, callback: Callback, callback_id: ID, removers: Removers, remover: Remover) -> None:
         with self._removers_lock:
