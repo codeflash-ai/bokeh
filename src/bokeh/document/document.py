@@ -27,6 +27,15 @@ figure below:
 from __future__ import annotations
 
 import logging # isort:skip
+from bokeh.themes import Theme, default as default_theme
+from bokeh.core.query import SelectorType, find, is_single_string_selector
+from bokeh.core.templates import FILE
+from bokeh.document.callbacks import DocumentCallbackManager
+from bokeh.document.config import DocumentConfig
+from bokeh.document.models import DocumentModelManager
+from bokeh.document.modules import DocumentModuleManager
+from bokeh.model import Model
+
 log = logging.getLogger(__name__)
 
 #-----------------------------------------------------------------------------
@@ -716,6 +725,14 @@ side of a communications channel while it was being removed on the other end.\
             Model or None
 
         '''
+        if is_single_string_selector(selector, 'name'):
+            result = self.models.get_all_by_name(selector['name'])
+            if len(result) > 1:
+                raise ValueError(f"Found more than one model matching {selector}: {result!r}")
+            if len(result) == 0:
+                return None
+            return result[0]
+
         result = list(self.select(selector))
         if len(result) > 1:
             raise ValueError(f"Found more than one model matching {selector}: {result!r}")
