@@ -20,7 +20,10 @@ performance and efficiency. The list of supported dtypes is:
 #-----------------------------------------------------------------------------
 from __future__ import annotations
 
+from bokeh.core.types import ID as _ID
+
 import logging # isort:skip
+
 log = logging.getLogger(__name__)
 
 #-----------------------------------------------------------------------------
@@ -283,9 +286,7 @@ def make_globally_unique_id() -> ID:
         str
 
     '''
-    from ..core.types import ID
-
-    return ID(str(uuid.uuid4()))
+    return _ID(str(uuid.uuid4()))
 
 def make_globally_unique_css_safe_id() -> ID:
     ''' Return a globally unique CSS-safe UUID.
@@ -298,16 +299,14 @@ def make_globally_unique_css_safe_id() -> ID:
         str
 
     '''
-    from ..core.types import ID
-
     max_iter = 100
 
     for _i in range(0, max_iter):
-        id = make_globally_unique_id()
+        id = str(uuid.uuid4())
         if id[0].isalpha():
-            return id
+            return _ID(id)
 
-    return ID(f"bk-{make_globally_unique_id()}")
+    return _ID(f"bk-{make_globally_unique_id()}")
 
 def array_encoding_disabled(array: npt.NDArray[Any]) -> bool:
     ''' Determine whether an array may be binary encoded.
