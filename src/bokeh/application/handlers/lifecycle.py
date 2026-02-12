@@ -14,7 +14,11 @@ in a specified Python module.
 #-----------------------------------------------------------------------------
 from __future__ import annotations
 
+from bokeh.application.application import SessionContext
+from bokeh.application.handlers.handler import Handler
+
 import logging # isort:skip
+
 log = logging.getLogger(__name__)
 
 #-----------------------------------------------------------------------------
@@ -115,7 +119,8 @@ class LifecycleHandler(Handler):
             session_context (SessionContext) :
 
         '''
-        return self._on_session_created(session_context)
+        cb = self._on_session_created
+        return cb(session_context)
 
     async def on_session_destroyed(self, session_context: SessionContext) -> None:
         ''' Execute ``on_session_destroyed`` from the configured module (if
