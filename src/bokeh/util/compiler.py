@@ -102,7 +102,9 @@ def nodejs_version() -> str | None:
     return _version(_run_nodejs)
 
 def npmjs_version() -> str | None:
-    return _version(_run_npmjs)
+    if not hasattr(npmjs_version, "_cache"):
+        npmjs_version._cache = _version(_run_npmjs)
+    return npmjs_version._cache  # type: ignore[attr-defined]
 
 def nodejs_compile(code: str, lang: str = "javascript", file: str | None = None) -> AttrDict:
     compilejs_script = join(bokehjs_dir, "js", "compiler.js")
