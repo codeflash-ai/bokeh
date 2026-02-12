@@ -59,7 +59,13 @@ def register_type_link(cls: type[Any]) -> Callable[[Fn], Fn]:
     return decorator
 
 def type_link(obj: Any) -> str:
-    return _type_links.get(obj.__class__, property_link)(obj)
+    # Optimize by caching type and minimizing redundant lookups/calls
+    tp = type(obj)
+    func = _type_links.get(tp)
+    if func is not None:
+        return func(obj)
+    # Inline the fallback to avoid the function call and re-access
+    return f":class:`~bokeh.core.properties.{tp.__name__}`\\ "
 
 #-----------------------------------------------------------------------------
 # Dev API
