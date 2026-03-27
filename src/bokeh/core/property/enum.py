@@ -13,7 +13,12 @@
 #-----------------------------------------------------------------------------
 from __future__ import annotations
 
+from bokeh.core import enums
+from bokeh.core.property._sphinx import (model_link, property_link,
+                                         register_type_link)
+
 import logging # isort:skip
+
 log = logging.getLogger(__name__)
 
 #-----------------------------------------------------------------------------
@@ -30,6 +35,10 @@ from .bases import Init, Property
 from .either import Either
 from .primitive import Int, String
 from .singletons import Intrinsic
+
+_enum_id_to_name = {id(value): name for name, value in enums.__dict__.items()}
+
+_enum_ids = set(_enum_id_to_name.keys())
 
 #-----------------------------------------------------------------------------
 # Globals and constants
@@ -126,11 +135,13 @@ class Enum(Either):
 @register_type_link(Enum)
 def _sphinx_type(obj: Enum) -> str:
     # try to return a link to a proper enum in bokeh.core.enums if possible
-    if obj._enum in enums.__dict__.values():
-        for name, value in enums.__dict__.items():
-            if obj._enum is value:
-                fullname = f"{obj._enum.__module__}.{name}"
-                return f"{property_link(obj)}({model_link(fullname)})"
+    enum_id = id(obj._enum)
+    if enum_id in _enum_ids:
+        name = _enum_id_to_name[enum_id]
+        fullname = f"{obj._enum.__module__}.{name}"
+        return f"{property_link(obj)}({model_link(fullname)})"
+
+    # otherwise just a basic str name format
 
     # otherwise just a basic str name format
     return f"{property_link(obj)}({obj._enum})"
