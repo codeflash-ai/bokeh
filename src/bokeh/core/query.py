@@ -15,6 +15,8 @@ models for instances that match specified criteria.
 from __future__ import annotations
 
 import logging # isort:skip
+from bokeh.model import Model
+
 log = logging.getLogger(__name__)
 
 #-----------------------------------------------------------------------------
@@ -105,7 +107,7 @@ def is_single_string_selector(selector: SelectorType, field: str) -> bool:
     return  len(selector) == 1 and field in selector and isinstance(selector[field], str)
 
 def match(obj: Model, selector: SelectorType) -> bool:
-    ''' Test whether a given Bokeh model matches a given selector.
+    """ Test whether a given Bokeh model matches a given selector.
 
     Args:
         obj (Model) : object to test
@@ -171,7 +173,7 @@ def match(obj: Model, selector: SelectorType) -> bool:
         >>> match(p, {'tags': ["foo"]})
         False
 
-    '''
+    """
     for key, val in selector.items():
 
         # test attributes
@@ -181,19 +183,27 @@ def match(obj: Model, selector: SelectorType) -> bool:
             if key == "type":
                 # type supports IN, check for that first
                 if isinstance(val, dict) and list(val.keys()) == [IN]:
-                    if not any(isinstance(obj, x) for x in val[IN]): return False
+                    # Use a tuple for isinstance for efficiency, avoid generator
+                    type_tuple = tuple(val[IN])
+                    if not isinstance(obj, type_tuple): return False
                 # otherwise just check the type of the object against val
                 elif not isinstance(obj, val): return False
 
             # special case 'tag'
             elif key == 'tags':
+                tags = obj.tags  # local var to avoid repeated attr access
                 if isinstance(val, str):
-                    if val not in obj.tags: return False
+                    if val not in tags: return False
                 else:
                     try:
-                        if not set(val) & set(obj.tags): return False
+                        # Convert tags to set once for efficiency
+                        tags_set = set(tags)
+                        # Accept anything with any overlap
+                        # Convert val to set if possible
+                        val_set = set(val)
+                        if not tags_set & val_set: return False
                     except TypeError:
-                        if val not in obj.tags: return False
+                        if val not in tags: return False
 
             # if the object doesn't have the attr, it doesn't match
             elif not hasattr(obj, key): return False
@@ -203,13 +213,17 @@ def match(obj: Model, selector: SelectorType) -> bool:
                 attr = getattr(obj, key)
                 if isinstance(val, dict):
                     if not match(attr, val): return False
-
                 else:
                     if attr != val: return False
 
         # test OR conditionals
         elif key is OR:
-            if not _or(obj, val): return False
+            # Inline the any() for OR to avoid function call overhead
+            for selector_option in val:
+                if match(obj, selector_option):
+                    break
+            else:
+                return False
 
         # test operands
         elif key in _operators:
@@ -358,7 +372,11 @@ _operators: dict[type[_Operator], Callable[[Any, Any], Any]] = {
 
 # realization of the OR operator
 def _or(obj: Model, selectors: Iterable[SelectorType]) -> bool:
-    return any(match(obj, selector) for selector in selectors)
+    # Use for loop to avoid generator and function call overhead from any()
+    for selector in selectors:
+        if match(obj, selector):
+            return True
+    return False
 
 #-----------------------------------------------------------------------------
 # Code
