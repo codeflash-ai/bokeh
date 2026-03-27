@@ -534,9 +534,13 @@ class Column(FlexBox):
         super().__init__(*args, **kwargs)
 
     def _sphinx_height_hint(self) -> int|None:
-        if any(x._sphinx_height_hint() is None for x in self.children):
-            return None
-        return sum(x._sphinx_height_hint() for x in self.children)
+        total = 0
+        for x in self.children:
+            hint = x._sphinx_height_hint()
+            if hint is None:
+                return None
+            total += hint
+        return total
 
 class TabPanel(Model):
     ''' A single-widget container with title bar and controls.
