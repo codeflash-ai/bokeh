@@ -14,6 +14,9 @@
 from __future__ import annotations
 
 import logging # isort:skip
+from bokeh.application import Application
+from bokeh.server.views.static_handler import StaticHandler
+
 log = logging.getLogger(__name__)
 
 #-----------------------------------------------------------------------------
@@ -796,10 +799,13 @@ class BokehTornado(TornadoApplication):
 #-----------------------------------------------------------------------------
 
 def create_static_handler(prefix: str, key: str, app: Application) -> tuple[str, type[StaticFileHandler | StaticHandler], dict[str, Any]]:
-    route = prefix
-    route += "/static/(.*)" if key == "/" else key + "/static/(.*)"
+    # Avoid unnecessary string concatenations and mutability by building the route as a single string
+    if key == "/":
+        route = prefix + "/static/(.*)"
+    else:
+        route = prefix + key + "/static/(.*)"
     if app.static_path is not None:
-        return (route, StaticFileHandler, {"path" : app.static_path})
+        return (route, StaticFileHandler, {"path": app.static_path})
     return (route, StaticHandler, {})
 
 #-----------------------------------------------------------------------------
