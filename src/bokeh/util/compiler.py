@@ -14,6 +14,8 @@
 from __future__ import annotations
 
 import logging # isort:skip
+from bokeh.core.has_props import HasProps
+
 log = logging.getLogger(__name__)
 
 #-----------------------------------------------------------------------------
@@ -461,14 +463,15 @@ _CACHING_IMPLEMENTATION = _model_cache_no_op
 
 def _get_custom_models(models: Sequence[type[HasProps]] | None) -> dict[str, CustomModel] | None:
     """Returns CustomModels for models with a custom `__implementation__`"""
-    custom_models: dict[str, CustomModel] = dict()
+    # Use dictionary comprehension for better performance and reduced memory overhead
+    custom_models: dict[str, CustomModel]
 
-    for cls in models or HasProps.model_class_reverse_map.values():
-        impl = getattr(cls, "__implementation__", None)
-
-        if impl is not None:
-            model = CustomModel(cls)
-            custom_models[model.full_name] = model
+    classes = models if models is not None else HasProps.model_class_reverse_map.values()
+    custom_models = {
+        (model := CustomModel(cls)).full_name: model
+        for cls in classes
+        if getattr(cls, "__implementation__", None) is not None
+    }
 
     return custom_models if custom_models else None
 
