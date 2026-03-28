@@ -161,12 +161,26 @@ class _ModelResolver:
         return dict(self._known_models)
 
     def clear_extensions(self) -> None:
-        def is_extension(obj: type[HasProps]) -> bool:
-            return getattr(obj, "__implementation__", None) is not None or \
-                   getattr(obj, "__javascript__", None) is not None or \
-                   getattr(obj, "__css__", None) is not None
-
-        self._known_models = {key: val for key, val in self._known_models.items() if not is_extension(val)}
+        # Inline is_extension logic, avoid repeated function calls and getattr overhead
+        _known_models = self._known_models
+        retained = {}
+        for key, val in _known_models.items():
+            # Fast path: check attributes directly, as we expect __implementation__, __javascript__, __css__ are sparse
+            # __dict__ lookup avoids falling back to getattr and __getattr__ machinery
+            vd = getattr(val, '__dict__', None)
+            if vd is not None:
+                if ("__implementation__" in vd and vd["__implementation__"] is not None) or \
+                   ("__javascript__" in vd and vd["__javascript__"] is not None) or \
+                   ("__css__" in vd and vd["__css__"] is not None):
+                    continue
+            else:
+                # Fallback for classes without __dict__, should be rare.
+                if getattr(val, "__implementation__", None) is not None or \
+                   getattr(val, "__javascript__", None) is not None or \
+                   getattr(val, "__css__", None) is not None:
+                    continue
+            retained[key] = val
+        self._known_models = retained
 
 _default_resolver = _ModelResolver()
 
