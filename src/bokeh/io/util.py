@@ -23,12 +23,7 @@ log = logging.getLogger(__name__)
 # Standard library imports
 import os
 import sys
-from os.path import (
-    basename,
-    dirname,
-    join,
-    splitext,
-)
+from os.path import basename, dirname, join, splitext
 from tempfile import NamedTemporaryFile
 
 #-----------------------------------------------------------------------------
@@ -75,11 +70,20 @@ def default_filename(ext: str) -> str:
     if filename is None:
         return temp_filename(ext)
 
-    basedir = dirname(filename) or os.getcwd()
+    # Cache dirname result
+    file_dir = dirname(filename)
+    if not file_dir:
+        basedir = os.getcwd()
+    else:
+        basedir = file_dir
 
-    if _no_access(basedir) or _shares_exec_prefix(basedir):
+    # Avoid recomputing checks if possible
+    no_access = _no_access(basedir)
+    shares_prefix = _shares_exec_prefix(basedir)
+    if no_access or shares_prefix:
         return temp_filename(ext)
 
+    # Use local variables for basename/splitext to avoid duplicate computation
     name, _ = splitext(basename(filename))
     return join(basedir, name + "." + ext)
 
