@@ -21,6 +21,8 @@ serializable properties.
 from __future__ import annotations
 
 import logging # isort:skip
+from bokeh.core.property.descriptor_factory import PropertyDescriptorFactory
+
 log = logging.getLogger(__name__)
 
 #-----------------------------------------------------------------------------
@@ -128,10 +130,10 @@ def _overridden_defaults(class_dict: dict[str, Any]) -> dict[str, Any]:
 
 def _generators(class_dict: dict[str, Any]):
     generators: dict[str, PropertyDescriptorFactory[Any]] = {}
-    for name, generator in tuple(class_dict.items()):
-        if isinstance(generator, PropertyDescriptorFactory):
-            del class_dict[name]
-            generators[name] = generator
+    # Avoid converting items to a tuple: perform single loop with list of keys
+    names_to_remove = [name for name, val in class_dict.items() if isinstance(val, PropertyDescriptorFactory)]
+    for name in names_to_remove:
+        generators[name] = class_dict.pop(name)
     return generators
 
 class _ModelResolver:
