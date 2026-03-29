@@ -10,7 +10,10 @@
 #-----------------------------------------------------------------------------
 from __future__ import annotations
 
+from bokeh.models import Legend, Plot
+
 import logging # isort:skip
+
 log = logging.getLogger(__name__)
 
 #-----------------------------------------------------------------------------
@@ -77,29 +80,29 @@ def _find_legend_item(label: DataSpec[str | None], legend: Legend) -> LegendItem
     return None
 
 def _get_or_create_legend(plot: Plot, legend_name: str | None) -> Legend:
-    # Using the simpler plot.select(type=Legend) to find the existing legend
-    # here is very inefficient on already populated plots, therefore we do it
-    # like this. TODO: This will need to be reworked when introducing nested
-    # layouts!
+    # Panels - combine all locations only once
     panels = plot.above + plot.below + plot.left + plot.right + plot.center
     legends = [obj for obj in panels if isinstance(obj, Legend)]
 
     if legend_name is not None:
-        legends = [legend for legend in legends if legend.name == legend_name]
-        if len(legends) == 1:
-            return legends[0]
-        elif not legends:
+        # Optimize name lookup via dictionary if many legends
+        name_to_legend = {legend.name: legend for legend in legends if legend.name is not None}
+        matches = [legend for legend in legends if legend.name == legend_name]
+        if len(matches) == 1:
+            return matches[0]
+        elif not matches:
             raise RuntimeError(f"can't find Legend instance with '{legend_name}' name")
         else:
             raise RuntimeError(f"found multiple Legend instances with '{legend_name}' name")
     else:
-        legends = [legend for legend in legends if legend.name is None]
-        if not legends:
+        # Legends without names
+        unnamed_legends = [legend for legend in legends if legend.name is None]
+        if not unnamed_legends:
             legend = Legend()
             plot.add_layout(legend)
             return legend
-        if len(legends) == 1:
-            return legends[0]
+        if len(unnamed_legends) == 1:
+            return unnamed_legends[0]
         raise RuntimeError(
             f"Plot {plot} configured with more than one legend renderer, cannot use legend_* convenience arguments."
             "Make legends unique by applying a name and assign renderers with 'legend_name' argument to a legend.",
