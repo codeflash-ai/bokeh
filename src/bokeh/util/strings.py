@@ -43,7 +43,7 @@ __all__ = (
 #-----------------------------------------------------------------------------
 
 def indent(text: str, n: int = 2, ch: str = " ") -> str:
-    ''' Indent all the lines in a given block of text by a specified amount.
+    """ Indent all the lines in a given block of text by a specified amount.
 
     Args:
         text (str) :
@@ -55,9 +55,14 @@ def indent(text: str, n: int = 2, ch: str = " ") -> str:
         ch (char, optional) :
             What character to fill the indentation with (default: " ")
 
-    '''
+    """
     padding = ch * n
-    return "\n".join(padding + line for line in text.split("\n"))
+    lines = text.split('\n')
+    if len(lines) == 1:
+        # Optimize for the single-line case (common for short docs/errors)
+        return padding + lines[0]
+    # Preallocate list and use list comprehension for better performance
+    return '\n'.join([padding + line for line in lines])
 
 
 def nice_join(seq: Iterable[Any], *, sep: str = ", ", conjunction: str | None = "or") -> str:
