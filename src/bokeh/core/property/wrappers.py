@@ -347,8 +347,11 @@ class PropertyValueDict(PropertyValueContainer, dict[str, T_Val]):
         x.update
 
     """
+
     def __init__(self, *args, **kwargs) -> None:
-        super().__init__(*args, **kwargs)
+        # Directly call dict.__init__ for efficiency, then PropertyValueContainer.__init__
+        dict.__init__(self, *args, **kwargs)
+        PropertyValueContainer.__init__(self)
 
     def _saved_copy(self):
         return dict(self)
@@ -356,7 +359,8 @@ class PropertyValueDict(PropertyValueContainer, dict[str, T_Val]):
     # delete x[y]
     @notify_owner
     def __delitem__(self, y):
-        return super().__delitem__(y)
+        # Avoid extra stack frames and unnecessary return by just calling dict.__delitem__
+        dict.__delitem__(self, y)
 
     # x[i] = y
     @notify_owner
