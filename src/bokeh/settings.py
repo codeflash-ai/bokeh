@@ -121,17 +121,8 @@ import os
 from enum import Enum, auto
 from os.path import join
 from pathlib import Path
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    Generic,
-    Literal,
-    Sequence,
-    TypeAlias,
-    TypeVar,
-    cast,
-)
+from typing import (TYPE_CHECKING, Any, Callable, Generic, Literal, Sequence,
+                    TypeAlias, TypeVar, cast)
 
 # External imports
 import yaml

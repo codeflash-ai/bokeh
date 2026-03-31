@@ -69,7 +69,9 @@ class StaticHandler(StaticFileHandler):
         if settings.dev:
             return path
         else:
-            version = StaticFileHandler.get_version(dict(static_path=settings.bokehjs_path()), path)
+            if not hasattr(cls, "_static_path_cache"):
+                cls._static_path_cache = dict(static_path=settings.bokehjs_path())
+            version = StaticFileHandler.get_version(cls._static_path_cache, path)
             return f"{path}?v={version}"
 
 #-----------------------------------------------------------------------------
