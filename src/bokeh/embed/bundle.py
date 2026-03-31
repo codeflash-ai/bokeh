@@ -14,6 +14,14 @@
 from __future__ import annotations
 
 import logging # isort:skip
+from bokeh.core.has_props import HasProps
+from bokeh.core.templates import CSS_RESOURCES, JS_RESOURCES
+from bokeh.document.document import Document
+from bokeh.embed.util import contains_tex_string
+from bokeh.resources import Hashes, Resources
+from bokeh.settings import settings
+from bokeh.util.compiler import bundle_models
+
 log = logging.getLogger(__name__)
 
 #-----------------------------------------------------------------------------
@@ -436,16 +444,25 @@ def _model_requires_mathjax(model: HasProps) -> bool:
     return False
 
 def _use_mathjax(all_objs: set[HasProps]) -> bool:
-    ''' Whether a collection of Bokeh objects contains a model requesting MathJax
+    """ Whether a collection of Bokeh objects contains a model requesting MathJax
     Args:
         objs (seq[HasProps or Document]) :
     Returns:
         bool
-    '''
+    """
+    # Move imports outside loops
     from ..models.glyphs import MathTextGlyph
     from ..models.text import MathText
 
-    return _any(all_objs, lambda obj: isinstance(obj, (MathTextGlyph, MathText)) or _model_requires_mathjax(obj)) or _ext_use_mathjax(all_objs)
+    # Inline the tuple creation and function lookup to closure to speed up isinstance
+    types_to_check = (MathTextGlyph, MathText)
+    _model_requires_mathjax_ref = _model_requires_mathjax
+
+    # Manual loop for short-circuiting before _ext_use_mathjax
+    for obj in all_objs:
+        if isinstance(obj, types_to_check) or _model_requires_mathjax_ref(obj):
+            return True
+    return _ext_use_mathjax(all_objs)
 
 def _use_gl(all_objs: set[HasProps]) -> bool:
     ''' Whether a collection of Bokeh objects contains a plot requesting WebGL
@@ -470,7 +487,14 @@ def _ext_use_widgets(all_objs: set[HasProps]) -> bool:
 
 def _ext_use_mathjax(all_objs: set[HasProps]) -> bool:
     from ..models.text import MathText
-    return _query_extensions(all_objs, lambda cls: issubclass(cls, MathText))
+
+    # Avoiding lambda to reduce call overhead, pass direct function object with closure
+    MathText_ref = MathText
+
+    def _issubclass_mathtext(cls: type[HasProps]) -> bool:
+        return issubclass(cls, MathText_ref)
+
+    return _query_extensions(all_objs, _issubclass_mathtext)
 #-----------------------------------------------------------------------------
 # Code
 #-----------------------------------------------------------------------------
