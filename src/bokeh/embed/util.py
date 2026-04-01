@@ -14,6 +14,9 @@
 from __future__ import annotations
 
 import logging # isort:skip
+from bokeh.core.types import ID
+from bokeh.model import Model
+
 log = logging.getLogger(__name__)
 
 #-----------------------------------------------------------------------------
@@ -255,6 +258,10 @@ class RenderRoot:
 class RenderRoots:
     def __init__(self, roots: dict[Model, ID]) -> None:
         self._roots = roots
+        self._name_index = {}
+        for root, elementid in self._roots.items():
+            if root.name not in self._name_index:
+                self._name_index[root.name] = (root, elementid)
 
     def __iter__(self) -> Iterator[RenderRoot]:
         for i in range(0, len(self)):
@@ -267,9 +274,8 @@ class RenderRoots:
         if isinstance(key, int):
             (root, elementid) = list(self._roots.items())[key]
         else:
-            for root, elementid in self._roots.items():
-                if root.name == key:
-                    break
+            if key in self._name_index:
+                root, elementid = self._name_index[key]
             else:
                 raise ValueError(f"root with {key!r} name not found")
 
