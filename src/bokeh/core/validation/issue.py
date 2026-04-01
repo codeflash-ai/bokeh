@@ -62,6 +62,10 @@ class Warning(Issue):
 
     @classmethod
     def all(cls) -> list[Warning]:
+        # Avoid creating a new list when the mapping is empty
+        if not cls._code_map:
+            return []
+        # Return values as a list without unnecessary intermediate objects
         return list(cls._code_map.values())
 
 @dataclass(frozen=True)
