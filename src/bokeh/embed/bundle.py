@@ -14,6 +14,8 @@
 from __future__ import annotations
 
 import logging # isort:skip
+from bokeh.core.has_props import HasProps
+
 log = logging.getLogger(__name__)
 
 #-----------------------------------------------------------------------------
@@ -366,7 +368,10 @@ def _any(objs: set[HasProps], query: Callable[[HasProps], bool]) -> bool:
         True, if ``query(obj)`` is True for some object in ``objs``, else False
 
     '''
-    return any(query(x) for x in objs)
+    for x in objs:
+        if query(x):
+            return True
+    return False
 
 def _use_tables(all_objs: set[HasProps]) -> bool:
     ''' Whether a collection of Bokeh objects contains a TableWidget
