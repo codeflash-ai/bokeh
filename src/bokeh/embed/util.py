@@ -46,6 +46,10 @@ if TYPE_CHECKING:
     from ..core.types import ID
     from ..document.document import DocJson
 
+_DOLLARS_BRACES_PARENS_RE = re.compile(
+    r"^\$\$.*?\$\$$|^\\\[.*?\\\]$|^\\\(.*?\\\)$", flags=re.S
+)
+
 #-----------------------------------------------------------------------------
 # Globals and constants
 #-----------------------------------------------------------------------------
@@ -359,12 +363,7 @@ def is_tex_string(text: str) -> bool:
     Returns:
         bool: True if string begins and ends with delimiters, False if not
     '''
-    dollars = r"^\$\$.*?\$\$$"
-    braces  = r"^\\\[.*?\\\]$"
-    parens  = r"^\\\(.*?\\\)$"
-
-    pat = re.compile(f"{dollars}|{braces}|{parens}", flags=re.S)
-    return pat.match(text) is not None
+    return _DOLLARS_BRACES_PARENS_RE.match(text) is not None
 
 def contains_tex_string(text: str) -> bool:
     ''' Whether a string contains any pair of MathJax default delimiters
