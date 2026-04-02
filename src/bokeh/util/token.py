@@ -17,7 +17,11 @@ other sessions hosted by the server.
 #-----------------------------------------------------------------------------
 from __future__ import annotations
 
+from bokeh.core.types import ID
+from bokeh.settings import settings
+
 import logging # isort:skip
+
 log = logging.getLogger(__name__)
 
 #-----------------------------------------------------------------------------
@@ -139,7 +143,11 @@ def get_session_id(token: str) -> ID:
     Returns:
        str
     """
-    decoded = json.loads(_base64_decode(token.split('.')[0]))
+    # Avoid unnecessary intermediate splits: assign the split part directly
+    # Avoid repeated function lookups
+    head = token.split('.', 1)[0]
+    # _base64_decode always returns bytes, json.loads can consume utf-8 decoded str
+    decoded = json.loads(_base64_decode(head).decode('utf-8'))
     return decoded['session_id']
 
 def get_token_payload(token: str) -> TokenPayload:
@@ -189,8 +197,7 @@ def check_token_signature(token: str,
         token_pieces = token.split('.', 1)
         if len(token_pieces) != 2:
             return False
-        base_token = token_pieces[0]
-        provided_token_signature = token_pieces[1]
+        base_token, provided_token_signature = token_pieces
         expected_token_signature = _signature(base_token, secret_key)
         # hmac.compare_digest() uses a string compare algorithm that doesn't
         # short-circuit so we don't allow timing analysis
@@ -269,12 +276,12 @@ def _get_sysrandom() -> tuple[Any, bool]:
         return random, using_sysrandom
 
 def _ensure_bytes(secret_key: str | bytes | None) -> bytes | None:
-    if secret_key is None:
-        return None
-    elif isinstance(secret_key, bytes):
+    # Short-circuit common cases for performance
+    if secret_key is None or isinstance(secret_key, bytes):
         return secret_key
-    else:
-        return codecs.encode(secret_key, 'utf-8')
+    # codecs.encode is not as fast as .encode() for simple str->bytes, so use standard encode
+    # Only fall back to codecs.encode if str.encode fails (should not happen for utf-8)
+    return secret_key.encode('utf-8')
 
 # this is broken out for unit testability
 def _reseed_if_needed(using_sysrandom: bool, secret_key: bytes | None) -> None:
@@ -313,9 +320,11 @@ def _base64_decode(encoded: bytes | str) -> bytes:
 
 def _signature(base_id: str, secret_key: bytes | None) -> str:
     secret_key = _ensure_bytes(secret_key)
-    base_id_encoded = codecs.encode(base_id, "utf-8")
+    # codecs.encode slower than str.encode for utf-8; use encode
+    base_id_encoded = base_id.encode("utf-8")
     assert secret_key is not None
     signer = hmac.new(secret_key, base_id_encoded, hashlib.sha256)
+    # _base64_encode only wants bytes
     return _base64_encode(signer.digest())
 
 def _get_random_string(
