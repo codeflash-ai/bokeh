@@ -32,7 +32,12 @@ Functions:
 #-----------------------------------------------------------------------------
 from __future__ import annotations
 
+import re
+
+from bokeh import __version__
+
 import logging # isort:skip
+
 log = logging.getLogger(__name__)
 
 #-----------------------------------------------------------------------------
@@ -41,6 +46,8 @@ log = logging.getLogger(__name__)
 
 # Bokeh imports
 from .. import __version__
+
+VERSION_PAT = re.compile(r"^(\d+\.\d+\.\d+)$")
 
 #-----------------------------------------------------------------------------
 # Globals and constants
@@ -59,9 +66,7 @@ def base_version() -> str:
     return _base_version_helper(__version__)
 
 def is_full_release(version: str | None = None) -> bool:
-    import re
     version = version or __version__
-    VERSION_PAT = re.compile(r"^(\d+\.\d+\.\d+)$")
     return bool(VERSION_PAT.match(version))
 
 #-----------------------------------------------------------------------------
