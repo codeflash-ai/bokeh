@@ -75,7 +75,7 @@ def bind_sockets(address: str | None, port: int) -> tuple[list[socket], int]:
     return ss, actual_port
 
 def check_allowlist(host: str, allowlist: Sequence[str]) -> bool:
-    ''' Check a given request host against a allowlist.
+    """ Check a given request host against a allowlist.
 
     Args:
         host (str) :
@@ -91,14 +91,32 @@ def check_allowlist(host: str, allowlist: Sequence[str]) -> bool:
         ``True``, if ``host`` matches any pattern in ``allowlist``, otherwise
         ``False``
 
-     '''
-    if ':' not in host:
-        host = host + ':80'
+     """
+    # Fast path for empty allowlist
+    if not allowlist:
+        return False
 
-    if host in allowlist:
+    # Add default port if missing (only once, avoid creating excess strings)
+    if ':' not in host:
+        host_with_port = host + ':80'
+    else:
+        host_with_port = host
+
+    # Use set for O(1) containment test for exact matches, if allowlist is large
+    # Avoid conversion if allowlist is already a set or tuple
+    # However, keep Sequence[str] contract - so avoid conversion unless truly large
+    # But for small lists, linear scan is faster, so keep as-is.
+    if host_with_port in allowlist:
         return True
 
-    return any(match_host(host, pattern) for pattern in allowlist)
+    # Avoid repeated attribute lookup
+    match = match_host
+
+    # Avoid generator overhead, use ordinary loop for early exit
+    for pattern in allowlist:
+        if match(host_with_port, pattern):
+            return True
+    return False
 
 def create_hosts_allowlist(host_list: Sequence[str] | None, port: int | None) -> list[str]:
     '''
