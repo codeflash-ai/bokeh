@@ -14,6 +14,14 @@
 from __future__ import annotations
 
 import logging # isort:skip
+from bokeh.core.has_props import HasProps
+from bokeh.core.templates import CSS_RESOURCES, JS_RESOURCES
+from bokeh.document.document import Document
+from bokeh.embed.util import contains_tex_string
+from bokeh.resources import Hashes, Resources
+from bokeh.settings import settings
+from bokeh.util.compiler import bundle_models
+
 log = logging.getLogger(__name__)
 
 #-----------------------------------------------------------------------------
@@ -448,7 +456,7 @@ def _use_mathjax(all_objs: set[HasProps]) -> bool:
     return _any(all_objs, lambda obj: isinstance(obj, (MathTextGlyph, MathText)) or _model_requires_mathjax(obj)) or _ext_use_mathjax(all_objs)
 
 def _use_gl(all_objs: set[HasProps]) -> bool:
-    ''' Whether a collection of Bokeh objects contains a plot requesting WebGL
+    """ Whether a collection of Bokeh objects contains a plot requesting WebGL
 
     Args:
         objs (seq[HasProps or Document]) :
@@ -456,9 +464,13 @@ def _use_gl(all_objs: set[HasProps]) -> bool:
     Returns:
         bool
 
-    '''
+    """
+    # Inline the lambda and hoist the import for efficiency
     from ..models.plots import Plot
-    return _any(all_objs, lambda obj: isinstance(obj, Plot) and obj.output_backend == "webgl")
+    for obj in all_objs:
+        if isinstance(obj, Plot) and obj.output_backend == "webgl":
+            return True
+    return False
 
 def _ext_use_tables(all_objs: set[HasProps]) -> bool:
     from ..models.widgets import TableWidget
