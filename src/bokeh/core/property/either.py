@@ -17,6 +17,8 @@ multiple possible types.
 from __future__ import annotations
 
 import logging # isort:skip
+from bokeh.core.property._sphinx import property_link, register_type_link, type_link
+
 log = logging.getLogger(__name__)
 
 #-----------------------------------------------------------------------------
@@ -127,5 +129,5 @@ class Either(ParameterizedProperty[Any]):
 
 @register_type_link(Either)
 def _sphinx_type_link(obj: Either[Any]):
-    subtypes = ", ".join(type_link(x) for x in obj.type_params)
+    subtypes = ", ".join([type_link(x) for x in obj.type_params])
     return f"{property_link(obj)}({subtypes})"
